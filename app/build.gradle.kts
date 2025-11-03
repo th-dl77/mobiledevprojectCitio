@@ -60,5 +60,7 @@ dependencies {
     implementation(platform("com.google.firebase:firebase-bom:33.1.2")) // Controleer voor de laatste BOM-versie
     implementation("com.google.firebase:firebase-firestore-ktx")
     implementation("com.google.firebase:firebase-auth-ktx")
+    implementation("com.firebaseui:firebase-ui-auth:9.0.0")
+
 
 }
