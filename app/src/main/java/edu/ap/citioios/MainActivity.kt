@@ -1,35 +1,29 @@
 package edu.ap.citioios
 
+import android.content.Context
 import android.os.Bundle
 import android.widget.Toast
-import android.app.Activity
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.firebase.ui.auth.AuthUI
-import com.firebase.ui.auth.FirebaseAuthUIActivityResultContract
-import com.firebase.ui.auth.data.model.FirebaseAuthUIAuthenticationResult
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 import edu.ap.citioios.ui.theme.CitioIOSTheme
+import edu.ap.citioios.repository.FirebaseRepository
 
 class MainActivity : ComponentActivity() {
     
-    // FirebaseUI launcher
-    private val signInLauncher = registerForActivityResult(
-        FirebaseAuthUIActivityResultContract(),
-    ) { res ->
-        this.onSignInResult(res)
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -38,58 +32,77 @@ class MainActivity : ComponentActivity() {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     AuthApp(
                         modifier = Modifier.padding(innerPadding),
-                        onStartSignIn = { startSignInFlow() }
+                        context = this
                     )
                 }
             }
         }
     }
+}
 
-    private fun startSignInFlow() {
-        val providers = arrayListOf(
-            AuthUI.IdpConfig.EmailBuilder().build()
-        )
-
-        val signInIntent = AuthUI.getInstance()
-            .createSignInIntentBuilder()
-            .setAvailableProviders(providers)
-            .build()
-        
-        signInLauncher.launch(signInIntent)
-    }
-
-    private fun onSignInResult(result: FirebaseAuthUIAuthenticationResult) {
-        if (result.resultCode == Activity.RESULT_OK) {
-            Toast.makeText(this, "Welkom!", Toast.LENGTH_SHORT).show()
-        } else {
-            Toast.makeText(this, "Inloggen geannuleerd", Toast.LENGTH_SHORT).show()
-        }
-    }
+enum class AuthScreen {
+    START, LOGIN, REGISTER, HOME
 }
 
 @Composable
 fun AuthApp(
     modifier: Modifier = Modifier,
-    onStartSignIn: () -> Unit
+    context: Context
 ) {
     val currentUser = Firebase.auth.currentUser
-    
-    if (currentUser == null) {
-        // Show polished welcome screen
-        WelcomeScreen(onGetStarted = onStartSignIn)
-    } else {
-        // Show home screen after login
-        HomeScreen(
-            userEmail = currentUser.email ?: "Onbekend",
-            onLogout = {
-                Firebase.auth.signOut()
-            }
-        )
+    var currentScreen by remember { mutableStateOf(if (currentUser == null) AuthScreen.START else AuthScreen.HOME) }
+
+    when (currentScreen) {
+        AuthScreen.START -> {
+            StartScreen(
+                onLoginClick = { currentScreen = AuthScreen.LOGIN },
+                onRegisterClick = { currentScreen = AuthScreen.REGISTER }
+            )
+        }
+        AuthScreen.LOGIN -> {
+            LoginScreen(
+                onLoginSuccess = { 
+                    currentScreen = AuthScreen.HOME 
+                    Toast.makeText(context, "Login successful!", Toast.LENGTH_SHORT).show()
+                },
+                onLoginError = { error ->
+                    Toast.makeText(context, "Login failed: $error", Toast.LENGTH_SHORT).show()
+                },
+                onBackClick = { currentScreen = AuthScreen.START },
+                onRegisterClick = { currentScreen = AuthScreen.REGISTER }
+            )
+        }
+        AuthScreen.REGISTER -> {
+            RegisterScreen(
+                onRegisterSuccess = { 
+                    currentScreen = AuthScreen.HOME 
+                    Toast.makeText(context, "Registration successful!", Toast.LENGTH_SHORT).show()
+                },
+                onRegisterError = { error ->
+                    Toast.makeText(context, "Registration failed: $error", Toast.LENGTH_SHORT).show()
+                },
+                onBackClick = { currentScreen = AuthScreen.START },
+                onLoginClick = { currentScreen = AuthScreen.LOGIN }
+            )
+        }
+        AuthScreen.HOME -> {
+            val user = Firebase.auth.currentUser
+            HomeScreen(
+                userEmail = user?.email ?: "Unknown",
+                onLogout = {
+                    FirebaseRepository.logoutUser()
+                    currentScreen = AuthScreen.START
+                }
+            )
+        }
     }
 }
 
 @Composable
-fun WelcomeScreen(onGetStarted: () -> Unit) {
+fun StartScreen(
+    onLoginClick: () -> Unit,
+    onRegisterClick: () -> Unit
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -114,18 +127,218 @@ fun WelcomeScreen(onGetStarted: () -> Unit) {
             modifier = Modifier.padding(bottom = 48.dp)
         )
 
-        // Get started button
+        // Login button
         Button(
-            onClick = onGetStarted,
+            onClick = onLoginClick,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp)
+                .padding(bottom = 16.dp),
+            shape = MaterialTheme.shapes.medium
+        ) {
+            Text(
+                text = "Login",
+                style = MaterialTheme.typography.titleMedium
+            )
+        }
+        
+        // Register button
+        OutlinedButton(
+            onClick = onRegisterClick,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),
             shape = MaterialTheme.shapes.medium
         ) {
             Text(
-                text = "Get started",
+                text = "Register",
                 style = MaterialTheme.typography.titleMedium
             )
+        }
+    }
+}
+
+@Composable
+fun LoginScreen(
+    onLoginSuccess: () -> Unit,
+    onLoginError: (String) -> Unit,
+    onBackClick: () -> Unit,
+    onRegisterClick: () -> Unit
+) {
+    var email by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var isLoading by remember { mutableStateOf(false) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text(
+            text = "Login",
+            style = MaterialTheme.typography.headlineLarge,
+            modifier = Modifier.padding(bottom = 32.dp)
+        )
+
+        OutlinedTextField(
+            value = email,
+            onValueChange = { email = it },
+            label = { Text("Email") },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp)
+        )
+
+        OutlinedTextField(
+            value = password,
+            onValueChange = { password = it },
+            label = { Text("Password") },
+            visualTransformation = PasswordVisualTransformation(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 24.dp)
+        )
+
+        Button(
+            onClick = {
+                isLoading = true
+                FirebaseRepository.loginUser(
+                    email = email,
+                    password = password,
+                    onSuccess = {
+                        isLoading = false
+                        onLoginSuccess()
+                    },
+                    onError = { error ->
+                        isLoading = false
+                        onLoginError(error.message ?: "Unknown error")
+                    }
+                )
+            },
+            enabled = !isLoading && email.isNotBlank() && password.isNotBlank(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp)
+                .padding(bottom = 16.dp)
+        ) {
+            if (isLoading) {
+                CircularProgressIndicator(modifier = Modifier.size(24.dp))
+            } else {
+                Text("Login")
+            }
+        }
+
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            TextButton(onClick = onBackClick) {
+                Text("Back")
+            }
+            TextButton(onClick = onRegisterClick) {
+                Text("Need account? Register")
+            }
+        }
+    }
+}
+
+@Composable
+fun RegisterScreen(
+    onRegisterSuccess: () -> Unit,
+    onRegisterError: (String) -> Unit,
+    onBackClick: () -> Unit,
+    onLoginClick: () -> Unit
+) {
+    var displayName by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var isLoading by remember { mutableStateOf(false) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text(
+            text = "Register",
+            style = MaterialTheme.typography.headlineLarge,
+            modifier = Modifier.padding(bottom = 32.dp)
+        )
+
+        OutlinedTextField(
+            value = displayName,
+            onValueChange = { displayName = it },
+            label = { Text("Display Name") },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp)
+        )
+
+        OutlinedTextField(
+            value = email,
+            onValueChange = { email = it },
+            label = { Text("Email") },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp)
+        )
+
+        OutlinedTextField(
+            value = password,
+            onValueChange = { password = it },
+            label = { Text("Password") },
+            visualTransformation = PasswordVisualTransformation(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 24.dp)
+        )
+
+        Button(
+            onClick = {
+                isLoading = true
+                FirebaseRepository.registerUser(
+                    email = email,
+                    password = password,
+                    displayName = displayName,
+                    onSuccess = {
+                        isLoading = false
+                        onRegisterSuccess()
+                    },
+                    onError = { error ->
+                        isLoading = false
+                        onRegisterError(error.message ?: "Unknown error")
+                    }
+                )
+            },
+            enabled = !isLoading && email.isNotBlank() && password.isNotBlank() && displayName.isNotBlank(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp)
+                .padding(bottom = 16.dp)
+        ) {
+            if (isLoading) {
+                CircularProgressIndicator(modifier = Modifier.size(24.dp))
+            } else {
+                Text("Register")
+            }
+        }
+
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            TextButton(onClick = onBackClick) {
+                Text("Back")
+            }
+            TextButton(onClick = onLoginClick) {
+                Text("Have account? Login")
+            }
         }
     }
 }
@@ -168,9 +381,38 @@ fun HomeScreen(userEmail: String, onLogout: () -> Unit) {
 
 @Preview(showBackground = true)
 @Composable
-fun WelcomeScreenPreview() {
+fun StartScreenPreview() {
     CitioIOSTheme {
-        WelcomeScreen(onGetStarted = {})
+        StartScreen(
+            onLoginClick = {},
+            onRegisterClick = {}
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun LoginScreenPreview() {
+    CitioIOSTheme {
+        LoginScreen(
+            onLoginSuccess = {},
+            onLoginError = {},
+            onBackClick = {},
+            onRegisterClick = {}
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun RegisterScreenPreview() {
+    CitioIOSTheme {
+        RegisterScreen(
+            onRegisterSuccess = {},
+            onRegisterError = {},
+            onBackClick = {},
+            onLoginClick = {}
+        )
     }
 }
 
