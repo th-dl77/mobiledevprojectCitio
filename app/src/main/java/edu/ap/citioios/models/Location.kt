@@ -2,6 +2,7 @@ package edu.ap.citioios.models
 
 import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.ServerTimestamp
+import org.osmdroid.util.GeoPoint
 import java.util.Date
 
 data class Location(
@@ -9,9 +10,7 @@ data class Location(
     val id: String = "",
 
     val name: String = "",
-    val latitude: Double = 0.0,
-    val longitude: Double = 0.0,
-
+    val geoPoint: GeoPoint,
     val imageUrl: String = "",
 
     val category: String = "",
