@@ -13,10 +13,12 @@ import androidx.navigation.compose.rememberNavController
 import edu.ap.citioios.ui.navigation.AppNavigation
 import edu.ap.citioios.ui.theme.CitioIOSTheme
 import edu.ap.citioios.ui.viewmodels.AuthViewModel
+import org.osmdroid.config.Configuration
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Configuration.getInstance().setUserAgentValue(packageName)
         enableEdgeToEdge()
         setContent {
             CitioIOSTheme {
