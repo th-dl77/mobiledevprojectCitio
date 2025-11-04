@@ -12,7 +12,8 @@ import edu.ap.citioios.ui.theme.CitioIOSTheme
 @Composable  
 fun HomeScreen(
     userEmail: String,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    onCityClick: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -38,7 +39,12 @@ fun HomeScreen(
             style = MaterialTheme.typography.bodyLarge,
             modifier = Modifier.padding(bottom = 32.dp)
         )
-
+        Button(
+            onClick = onCityClick,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Go to cities")
+        }
         Button(
             onClick = onLogout,
             modifier = Modifier.fillMaxWidth()
@@ -54,7 +60,8 @@ fun HomeScreenPreview() {
     CitioIOSTheme {
         HomeScreen(
             userEmail = "user@example.com",
-            onLogout = {}
+            onLogout = {},
+            onCityClick = {}
         )
     }
 }

@@ -4,5 +4,6 @@ enum class AuthScreen {
     START,
     LOGIN,
     REGISTER,
-    HOME
+    HOME,
+    CITY
 }

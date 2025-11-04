@@ -10,6 +10,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import edu.ap.citioios.ui.screens.CityScreen
 import edu.ap.citioios.ui.screens.HomeScreen
 import edu.ap.citioios.ui.screens.LoginScreen
 import edu.ap.citioios.ui.screens.RegisterScreen
@@ -108,8 +109,15 @@ fun AppNavigation(
                     navController.navigate(AuthScreen.START.name) {
                         popUpTo(AuthScreen.START.name) { inclusive = false }
                     }
+                },
+                onCityClick = {
+                    navController.navigate(AuthScreen.CITY.name)
                 }
             )
+        }
+
+        composable(route = AuthScreen.CITY.name) {
+            CityScreen()
         }
     }
 }
