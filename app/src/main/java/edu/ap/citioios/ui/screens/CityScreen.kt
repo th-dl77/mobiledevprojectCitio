@@ -51,6 +51,7 @@ val sampleCities = listOf(
     Location("5","The Breakfast Club", GeoPoint(51.21672457372679, 4.399149929103938))
 )
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CityScreen(
     city: City,

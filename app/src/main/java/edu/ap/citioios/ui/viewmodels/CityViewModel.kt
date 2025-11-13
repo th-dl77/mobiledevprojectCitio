@@ -34,7 +34,8 @@ class CityViewModel : ViewModel() {
                     filteredCities = filterCities(cities, _uiState.value.searchQuery),
                     isLoading = false
                 )
-            }
+            },
+            onError = {}
         )
     }
 

@@ -22,7 +22,8 @@ import edu.ap.citioios.models.City
 import edu.ap.citioios.ui.theme.CitioIOSTheme
 import edu.ap.citioios.ui.viewmodels.CityViewModel
 
-@Composable  
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
 fun HomeScreen(
     userEmail: String,
     onLogout: () -> Unit,
