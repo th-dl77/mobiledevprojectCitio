@@ -10,7 +10,7 @@ data class Location(
     val id: String = "",
 
     val name: String = "",
-    val geoPoint: GeoPoint,
+    val geoPoint: GeoPoint = GeoPoint(0.0, 0.0),
     val imageUrl: String = "",
 
     val category: String = "",
