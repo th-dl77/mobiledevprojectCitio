@@ -6,8 +6,12 @@ import com.google.firebase.ktx.Firebase
 import edu.ap.citioios.models.Location
 import com.google.firebase.auth.ktx.auth
 import edu.ap.citioios.models.User
+import edu.ap.citioios.models.City
 import com.google.firebase.auth.userProfileChangeRequest
+import com.google.firebase.firestore.Query
+import kotlinx.coroutines.tasks.await
 
+//TODO: Split repo in different repo's per subject, example authrepo, locationrepo, cityrepo
 
 object FirebaseRepository {
     private val db = Firebase.firestore
@@ -27,6 +31,65 @@ object FirebaseRepository {
             }
             .addOnFailureListener { e ->
                 Log.w("Firestore", "Fout bij het opslaan van nieuwe locatie", e)
+                onError(e)
+            }
+    }
+
+    // City operations
+    fun fetchCities(
+        onSuccess: (List<City>) -> Unit,
+        onError: (Exception) -> Unit
+    ) {
+        db.collection("cities")
+            .orderBy("name")
+            .get()
+            .addOnSuccessListener { result ->
+                val cities = result.documents.mapNotNull { document ->
+                    document.toObject(City::class.java)
+                }
+                Log.d("Firestore", "Cities fetched successfully: ${cities.size}")
+                onSuccess(cities)
+            }
+            .addOnFailureListener { e ->
+                Log.w("Firestore", "Error fetching cities", e)
+                onError(e)
+            }
+    }
+
+    fun fetchLocationsByCity(
+        cityName: String,
+        onSuccess: (List<Location>) -> Unit,
+        onError: (Exception) -> Unit
+    ) {
+        db.collection("locations")
+            .whereEqualTo("cityName", cityName)
+            .get()
+            .addOnSuccessListener { result ->
+                val locations = result.documents.mapNotNull { document ->
+                    document.toObject(Location::class.java)
+                }
+                Log.d("Firestore", "Locations for $cityName fetched successfully: ${locations.size}")
+                onSuccess(locations)
+            }
+            .addOnFailureListener { e ->
+                Log.w("Firestore", "Error fetching locations for $cityName", e)
+                onError(e)
+            }
+    }
+
+    fun saveCityToFirestore(
+        city: City,
+        onSuccess: () -> Unit,
+        onError: (Exception) -> Unit
+    ) {
+        db.collection("cities")
+            .add(city)
+            .addOnSuccessListener {
+                Log.d("Firestore", "New city successfully saved")
+                onSuccess()
+            }
+            .addOnFailureListener { e ->
+                Log.w("Firestore", "Error saving new city", e)
                 onError(e)
             }
     }
