@@ -1,21 +1,21 @@
 package edu.ap.citioios.ui.navigation
 
 import android.widget.Toast
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.lifecycle.viewmodel.compose.viewModel
+import edu.ap.citioios.models.City
 import edu.ap.citioios.ui.screens.CityScreen
 import edu.ap.citioios.ui.screens.HomeScreen
 import edu.ap.citioios.ui.screens.LoginScreen
 import edu.ap.citioios.ui.screens.RegisterScreen
 import edu.ap.citioios.ui.screens.StartScreen
 import edu.ap.citioios.ui.viewmodels.AuthViewModel
+import edu.ap.citioios.ui.viewmodels.CityViewModel
 
 @Composable
 fun AppNavigation(
@@ -25,6 +25,7 @@ fun AppNavigation(
 ) {
     val authUiState by authViewModel.uiState.collectAsState()
     val context = LocalContext.current
+    var selectedCity by remember { mutableStateOf<City?>(null) }
 
     // Navigate to HOME when user successfully logs in
     LaunchedEffect(authUiState.isLoggedIn) {
@@ -110,14 +111,26 @@ fun AppNavigation(
                         popUpTo(AuthScreen.START.name) { inclusive = false }
                     }
                 },
-                onCityClick = {
+                onCityClick = { city ->
+                    selectedCity = city
                     navController.navigate(AuthScreen.CITY.name)
                 }
             )
         }
 
         composable(route = AuthScreen.CITY.name) {
-            CityScreen()
+            selectedCity?.let { city ->
+                CityScreen(
+                    city = city,
+                    onBackClick = {
+                        navController.popBackStack()
+                    }
+                )
+            } ?: run {
+                LaunchedEffect(Unit) {
+                    navController.popBackStack()
+                }
+            }
         }
     }
 }
