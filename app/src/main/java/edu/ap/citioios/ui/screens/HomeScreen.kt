@@ -1,55 +1,192 @@
 package edu.ap.citioios.ui.screens
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import edu.ap.citioios.models.City
 import edu.ap.citioios.ui.theme.CitioIOSTheme
+import edu.ap.citioios.ui.viewmodels.CityViewModel
 
 @Composable  
 fun HomeScreen(
     userEmail: String,
     onLogout: () -> Unit,
-    onCityClick: () -> Unit
+    onCityClick: (City) -> Unit,
+    cityViewModel: CityViewModel = viewModel()
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text(
-            text = "Welkom bij Citio!",
-            style = MaterialTheme.typography.headlineLarge,
-            modifier = Modifier.padding(bottom = 16.dp)
-        )
-        
-        Text(
-            text = "Je bent ingelogd als:",
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.padding(bottom = 8.dp)
-        )
-        
-        Text(
-            text = userEmail,
-            style = MaterialTheme.typography.bodyLarge,
-            modifier = Modifier.padding(bottom = 32.dp)
-        )
-        Button(
-            onClick = onCityClick,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Go to cities")
+    val cityUiState by cityViewModel.uiState.collectAsState()
+    
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Citio - Kies een stad") },
+                actions = {
+                    IconButton(onClick = onLogout) {
+                        Icon(
+                            painter = painterResource(android.R.drawable.ic_menu_revert),
+                            contentDescription = "Uitloggen"
+                        )
+                    }
+                }
+            )
+        },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = { /* TODO: Implement add new city */ },
+                modifier = Modifier.padding(16.dp)
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "Add new city")
+            }
         }
-        Button(
-            onClick = onLogout,
-            modifier = Modifier.fillMaxWidth()
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
         ) {
-            Text("Uitloggen")
+            // Welcome message
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp)
+                ) {
+                    Text(
+                        text = "Welkom bij Citio!",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "Ingelogd als: $userEmail",
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
+            }
+
+            // Search bar
+            OutlinedTextField(
+                value = cityUiState.searchQuery,
+                onValueChange = { cityViewModel.updateSearchQuery(it) },
+                label = { Text("Zoek stad...") },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                singleLine = true
+            )
+
+
+            // Loading indicator
+            if (cityUiState.isLoading) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(32.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            }
+
+            // Cities list
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(bottom = 80.dp) // Space for FAB
+            ) {
+                items(cityUiState.filteredCities) { city ->
+                    CityListItem(
+                        city = city,
+                        onClick = { onCityClick(city) }
+                    )
+                }
+                
+                if (cityUiState.filteredCities.isEmpty() && !cityUiState.isLoading) {
+                    item {
+                        Card(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(32.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    text = if (cityUiState.searchQuery.isBlank()) 
+                                        "Geen steden gevonden" 
+                                    else 
+                                        "Geen steden gevonden voor '${cityUiState.searchQuery}'",
+                                    style = MaterialTheme.typography.bodyLarge
+                                )
+                                Button(
+                                    onClick = { cityViewModel.refreshCities() },
+                                    modifier = Modifier.padding(top = 16.dp)
+                                ) {
+                                    Text("Probeer opnieuw")
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun CityListItem(
+    city: City,
+    onClick: () -> Unit
+    ) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Text(
+                text = city.name,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold
+            )
+            if (city.description.isNotBlank()) {
+                Text(
+                    text = city.description,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            }
+            Text(
+                text = "${city.restaurantCount} restaurants",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 8.dp)
+            )
         }
     }
 }
