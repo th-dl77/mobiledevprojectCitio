@@ -193,14 +193,3 @@ fun CityListItem(
     }
 }
 
-@Preview(showBackground = true)
-@Composable
-fun HomeScreenPreview() {
-    CitioIOSTheme {
-        HomeScreen(
-            userEmail = "user@example.com",
-            onLogout = {},
-            onCityClick = {}
-        )
-    }
-}

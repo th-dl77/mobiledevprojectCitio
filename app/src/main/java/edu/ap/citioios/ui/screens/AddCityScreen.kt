@@ -14,6 +14,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import edu.ap.citioios.ui.theme.CitioIOSTheme
 import edu.ap.citioios.ui.viewmodels.CityViewModel
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddCityScreen(
     onBackClick: () -> Unit,
