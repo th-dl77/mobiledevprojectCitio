@@ -77,6 +77,25 @@ object FirebaseRepository {
             }
     }
 
+    fun checkCityExists(
+        cityName: String,
+        onResult: (Boolean) -> Unit,
+        onError: (Exception) -> Unit
+    ) {
+        db.collection("cities")
+            .whereEqualTo("name", cityName.trim())
+            .get()
+            .addOnSuccessListener { result ->
+                val exists = !result.isEmpty
+                Log.d("Firestore", "City existence check for '$cityName': $exists")
+                onResult(exists)
+            }
+            .addOnFailureListener { e ->
+                Log.w("Firestore", "Error checking city existence for '$cityName'", e)
+                onError(e)
+            }
+    }
+
     fun saveCityToFirestore(
         city: City,
         onSuccess: () -> Unit,
