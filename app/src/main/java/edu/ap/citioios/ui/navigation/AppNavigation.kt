@@ -9,6 +9,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.lifecycle.viewmodel.compose.viewModel
 import edu.ap.citioios.models.City
+import edu.ap.citioios.ui.screens.AddCityScreen
 import edu.ap.citioios.ui.screens.CityScreen
 import edu.ap.citioios.ui.screens.HomeScreen
 import edu.ap.citioios.ui.screens.LoginScreen
@@ -114,6 +115,21 @@ fun AppNavigation(
                 onCityClick = { city ->
                     selectedCity = city
                     navController.navigate(AuthScreen.CITY.name)
+                },
+                onAddCityClick = {
+                    navController.navigate(AuthScreen.ADD_CITY.name)
+                }
+            )
+        }
+
+        composable(route = AuthScreen.ADD_CITY.name) {
+            AddCityScreen(
+                onBackClick = {
+                    navController.popBackStack()
+                },
+                onCityAdded = {
+                    navController.popBackStack()
+                    Toast.makeText(context, "Stad toegevoegd!", Toast.LENGTH_SHORT).show()
                 }
             )
         }

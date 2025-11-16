@@ -27,6 +27,7 @@ fun HomeScreen(
     userEmail: String,
     onLogout: () -> Unit,
     onCityClick: (City) -> Unit,
+    onAddCityClick: () -> Unit,
     cityViewModel: CityViewModel = viewModel()
 ) {
     val cityUiState by cityViewModel.uiState.collectAsState()
@@ -47,7 +48,7 @@ fun HomeScreen(
         },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { /* TODO: Implement add new city */ },
+                onClick = onAddCityClick,
                 modifier = Modifier.padding(16.dp)
             ) {
                 Icon(Icons.Default.Add, contentDescription = "Add new city")
