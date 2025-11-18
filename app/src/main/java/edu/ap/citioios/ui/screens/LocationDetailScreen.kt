@@ -1,5 +1,6 @@
 package edu.ap.citioios.ui.screens
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -10,23 +11,30 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableDoubleStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import edu.ap.citioios.models.Location
 import edu.ap.citioios.models.toOsmGeoPoint
 import edu.ap.citioios.ui.theme.CitioIOSTheme
+import edu.ap.citioios.ui.viewmodels.LocationDetailViewModel
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LocationDetailScreen(
     location: Location,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    viewModel: LocationDetailViewModel = viewModel()
 ) {
     val osmGeoPoint = location.geoPoint.toOsmGeoPoint()
+
 
     val center by remember { mutableDoubleStateOf(osmGeoPoint.latitude) }
     val zoom by remember { mutableDoubleStateOf(16.0) }
@@ -119,9 +127,81 @@ fun LocationDetailScreen(
                     }
                 }
             }
+            RatingAndCommentSection(
+                onReviewSubmit = { rating, comment ->
+                    viewModel.submitReview(
+                        locationId = location.id,
+                        rating = rating,
+                        comment = comment
+                    )
+                }
+            )
+        }
+    }
+}
+@Composable
+fun RatingAndCommentSection(onReviewSubmit: (Int, String) -> Unit) {
+    var selectedRating by remember { mutableIntStateOf(0) }
+    var comment by remember { mutableStateOf("") }
 
-            // todo: Add a section for reviews and comments here
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth()
+        ) {
+            Text(
+                text = "Laat een review achter",
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
 
+            Row(
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
+            ) {
+                (1..5).forEach { starIndex ->
+                    Icon(
+                        Icons.Filled.Star,
+                        contentDescription = "Ster $starIndex",
+                        tint = if (starIndex <= selectedRating) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                        modifier = Modifier
+                            .size(36.dp)
+                            .padding(horizontal = 2.dp)
+                            .clickable { selectedRating = starIndex }
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            OutlinedTextField(
+                value = comment,
+                onValueChange = { comment = it },
+                label = { Text("Commentaar (optioneel)") },
+                modifier = Modifier.fillMaxWidth(),
+                maxLines = 4
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Button(
+                onClick = {
+                    if (selectedRating > 0) {
+                        onReviewSubmit(selectedRating, comment.trim())
+                        selectedRating = 0
+                        comment = ""
+                    }
+                },
+                enabled = selectedRating > 0,
+                modifier = Modifier.align(Alignment.End)
+            ) {
+                Text("Verstuur Review")
+            }
         }
     }
 }

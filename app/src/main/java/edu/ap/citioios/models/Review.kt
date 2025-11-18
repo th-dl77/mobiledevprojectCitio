@@ -12,9 +12,11 @@ data class Review(
 
     val username: String = "",
 
-    val rating: Double = 0.0,
+    val rating: Int = 0,
     val comment: String = "",
 
     @ServerTimestamp
-    val createdAt: Date? = null
+    val createdAt: Date? = null,
+
+    val locationId : String = ""
 )
