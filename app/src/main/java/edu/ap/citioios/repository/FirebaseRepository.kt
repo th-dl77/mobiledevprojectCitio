@@ -56,23 +56,23 @@ object FirebaseRepository {
             }
     }
 
-    fun fetchLocationsByCity(
-        cityName: String,
+    fun fetchLocationsByCityId(
+        cityId: String,
         onSuccess: (List<Location>) -> Unit,
         onError: (Exception) -> Unit
     ) {
         db.collection("locations")
-            .whereEqualTo("cityName", cityName)
+            .whereEqualTo("cityId", cityId)
             .get()
             .addOnSuccessListener { result ->
                 val locations = result.documents.mapNotNull { document ->
                     document.toObject(Location::class.java)
                 }
-                Log.d("Firestore", "Locations for $cityName fetched successfully: ${locations.size}")
+                Log.d("Firestore", "Locations for cityId $cityId fetched successfully: ${locations.size}")
                 onSuccess(locations)
             }
             .addOnFailureListener { e ->
-                Log.w("Firestore", "Error fetching locations for $cityName", e)
+                Log.w("Firestore", "Error fetching locations for cityId $cityId", e)
                 onError(e)
             }
     }
