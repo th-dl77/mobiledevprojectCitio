@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
@@ -291,10 +292,11 @@ fun LocationListItem(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Column(
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f).padding(end = 8.dp)
             ) {
                 Text(
                     text = location.name,
@@ -302,8 +304,6 @@ fun LocationListItem(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                Button(onClick = { onDetailScreenClick(location) }) { Text("View")}
-                
                 if (location.category.isNotBlank()) {
                     Text(
                         text = location.category,
@@ -312,7 +312,6 @@ fun LocationListItem(
                         modifier = Modifier.padding(top = 1.dp)
                     )
                 }
-                
                 if (location.averageRating > 0.0) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -338,6 +337,17 @@ fun LocationListItem(
                         }
                     }
                 }
+            }
+
+            IconButton(
+                onClick = { onDetailScreenClick(location) },
+                modifier = Modifier.size(40.dp)
+            ) {
+                Icon(
+                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = "View Details",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }
