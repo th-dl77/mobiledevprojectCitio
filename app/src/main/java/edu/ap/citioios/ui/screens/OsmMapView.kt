@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
 import edu.ap.citioios.models.Location
+import edu.ap.citioios.models.toOsmGeoPoint
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
@@ -14,7 +15,7 @@ private fun addMarkers(mapView: MapView, locations: List<Location>) {
 
     locations.forEach { location ->
         val marker = Marker(mapView)
-        marker.position = location.geoPoint
+        marker.position = location.geoPoint.toOsmGeoPoint()
         marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
         marker.icon = markerIcon
 

@@ -55,6 +55,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import edu.ap.citioios.models.City
 import edu.ap.citioios.models.Location
+import edu.ap.citioios.models.toOsmGeoPoint
 import edu.ap.citioios.ui.theme.CitioIOSTheme
 import edu.ap.citioios.ui.viewmodels.LocationViewModel
 import org.osmdroid.util.GeoPoint
@@ -264,7 +265,7 @@ fun CityScreen(
                     LocationListItem(
                         location = location,
                         onClick = {
-                            center = location.geoPoint
+                            center = location.geoPoint.toOsmGeoPoint()  // Convert Firebase GeoPoint to OSM GeoPoint
                             zoom = 18.0
                         }
                     )
