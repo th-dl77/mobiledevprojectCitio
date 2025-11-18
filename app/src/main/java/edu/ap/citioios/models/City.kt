@@ -11,6 +11,7 @@ data class City(
     val description: String = "",
     val imageUrl: String = "",
     val restaurantCount: Int = 0,
+    val country: String = "",
     @ServerTimestamp
     val createdAt: Date? = null
 )

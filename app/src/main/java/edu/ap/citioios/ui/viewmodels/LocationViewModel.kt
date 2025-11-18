@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import android.util.Log
+import com.google.firebase.firestore.GeoPoint
 
 data class LocationUiState(
     val locations: List<Location> = emptyList(),
@@ -16,7 +17,8 @@ data class LocationUiState(
     val error: String? = null,
     val selectedCategory: String? = null,
     val searchQuery: String = "",
-    val availableCategories: List<String> = emptyList()
+    val availableCategories: List<String> = emptyList(),
+    val errorMessage: String = ""
 )
 
 class LocationViewModel : ViewModel() {
@@ -97,5 +99,74 @@ class LocationViewModel : ViewModel() {
 
     fun refreshLocations(cityId: String) {
         loadLocationsForCity(cityId)
+    }
+
+    fun addLocation(
+        name: String,
+        category: String,
+        street: String,
+        number: String,
+        cityId: String,
+        cityName: String,
+        country: String,
+        onSuccess: () -> Unit
+    ) {
+        _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = "")
+
+        // Check if location already exists in this city
+        FirebaseRepository.checkLocationExists(
+            locationName = name,
+            cityId = cityId,
+            onResult = { exists ->
+                if (exists) {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        errorMessage = "Een locatie met deze naam bestaat al in deze stad"
+                    )
+                } else {
+                    // doesn't exist, create it
+                    val currentUser = FirebaseRepository.getCurrentUser()
+                    val formattedAddress = "$country, $cityName, $street $number"
+                    
+                    val newLocation = Location(
+                        name = name,
+                        category = category,
+                        address = formattedAddress,
+                        cityId = cityId,
+                        addedByUserId = currentUser?.uid ?: "",
+                        geoPoint = GeoPoint(0.0, 0.0), // Default coordinates for now, get from osm api?
+                        averageRating = 0.0,
+                        reviewCount = 0,
+                        imageUrl = "", //Add from camera, use camerX libray
+                        description = ""
+                    )
+                    
+                    FirebaseRepository.saveNewLocationToFirestore(
+                        location = newLocation,
+                        onSuccess = {
+                            _uiState.value = _uiState.value.copy(isLoading = false)
+                            loadLocationsForCity(cityId) // Refresh
+                            onSuccess()
+                        },
+                        onError = { exception ->
+                            _uiState.value = _uiState.value.copy(
+                                isLoading = false,
+                                errorMessage = "Fout bij het opslaan van de locatie: ${exception.message}"
+                            )
+                        }
+                    )
+                }
+            },
+            onError = { exception ->
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    errorMessage = "Fout bij het controleren van de locatie: ${exception.message}"
+                )
+            }
+        )
+    }
+
+    fun clearError() {
+        _uiState.value = _uiState.value.copy(errorMessage = "")
     }
 }
