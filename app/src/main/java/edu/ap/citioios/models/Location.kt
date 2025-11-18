@@ -20,7 +20,7 @@ data class Location(
     @ServerTimestamp
     val addedAt: Date? = null,
 
-    val cityName: String = "",
+    val cityId: String = "",
 
     val averageRating: Double = 0.0,
     val reviewCount: Int = 0
