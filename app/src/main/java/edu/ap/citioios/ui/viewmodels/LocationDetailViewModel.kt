@@ -4,26 +4,36 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.FieldValue
 import edu.ap.citioios.models.Review
+import edu.ap.citioios.repository.FirebaseRepository
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
 class LocationDetailViewModel(
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance(),
-    private val auth: FirebaseAuth = FirebaseAuth.getInstance()
+    private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
+    private val repository: FirebaseRepository = FirebaseRepository
 ) : ViewModel() {
 
+    private val _reviews = MutableStateFlow<List<Review>>(emptyList())
+    val reviews: StateFlow<List<Review>> = _reviews.asStateFlow()
+
     fun submitReview(locationId: String, rating: Int, comment: String) {
-        val currentUserId = auth.currentUser?.uid
-        if (currentUserId == null) {
+        val currentUser = auth.currentUser
+        if (currentUser == null) {
             println("Fout: Gebruiker niet ingelogd")
             return
         }
 
+        val userDisplayName = currentUser.displayName ?: "Anoniem"
+
         val newReview = Review(
             locationId = locationId,
-            userId = currentUserId,
+            userId = currentUser.uid,
+            userDisplayName = userDisplayName,
             rating = rating,
             comment = comment
         )
@@ -34,6 +44,8 @@ class LocationDetailViewModel(
                 println("Review succesvol opgeslagen! Document ID: ${reviewRef.id}")
 
                 updateLocationRating(locationId, rating)
+
+                fetchReviews(locationId)
 
             } catch (e: Exception) {
                 println("Fout bij het opslaan/updaten van de review/locatie: $e")
@@ -72,6 +84,12 @@ class LocationDetailViewModel(
 
         } catch (e: Exception) {
             println("Fout bij Transactie: $e")
+        }
+    }
+
+    fun fetchReviews(locationId: String) {
+        repository.fetchReviewsForLocation(locationId) { reviewsList ->
+            _reviews.value = reviewsList
         }
     }
 }
