@@ -91,6 +91,18 @@ fun LocationDetailScreen(
                             value = location.category
                         )
                     }
+                    if (location.address.isNotBlank()) {
+                        DetailItem(
+                            label = "Address",
+                            value = location.address
+                        )
+                    }
+                    if (location.description.isNotBlank()) {
+                        DetailItem(
+                            label = "Description",
+                            value = location.description
+                        )
+                    }
 
                     DetailItem(
                         label = "Coordinates (OSM)",
