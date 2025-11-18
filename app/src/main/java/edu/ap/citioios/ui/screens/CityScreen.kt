@@ -66,7 +66,8 @@ fun CityScreen(
     city: City,
     onBackClick: () -> Unit,
     onAddLocationClick: () -> Unit = {},
-    locationViewModel: LocationViewModel = viewModel()
+    locationViewModel: LocationViewModel = viewModel(),
+    onDetailScreenClick: (Location) -> Unit = {}
 ) {
     val locationUiState by locationViewModel.uiState.collectAsState()
     
@@ -233,7 +234,8 @@ fun CityScreen(
                         onClick = {
                             center = location.geoPoint.toOsmGeoPoint()
                             zoom = 18.0
-                        }
+                        },
+                        onDetailScreenClick = onDetailScreenClick
                     )
                 }
                 
@@ -275,7 +277,8 @@ fun CityScreen(
 @Composable
 fun LocationListItem(
     location: Location,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onDetailScreenClick: (Location) -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -299,6 +302,7 @@ fun LocationListItem(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
+                Button(onClick = { onDetailScreenClick(location) }) { Text("View")}
                 
                 if (location.category.isNotBlank()) {
                     Text(
