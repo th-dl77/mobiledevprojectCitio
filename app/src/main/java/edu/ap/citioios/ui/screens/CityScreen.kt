@@ -225,14 +225,14 @@ fun CityScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(bottom = 80.dp) // Space for FAB
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+                contentPadding = PaddingValues(bottom = 80.dp)
             ) {
                 items(locationUiState.filteredLocations) { location ->
                     LocationListItem(
                         location = location,
                         onClick = {
-                            center = location.geoPoint.toOsmGeoPoint()  // Convert Firebase GeoPoint to OSM GeoPoint
+                            center = location.geoPoint.toOsmGeoPoint()
                             zoom = 18.0
                         }
                     )
@@ -282,12 +282,11 @@ fun LocationListItem(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() },
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(
@@ -295,8 +294,7 @@ fun LocationListItem(
             ) {
                 Text(
                     text = location.name,
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleMedium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -304,27 +302,27 @@ fun LocationListItem(
                 if (location.category.isNotBlank()) {
                     Text(
                         text = location.category,
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(top = 2.dp)
+                        modifier = Modifier.padding(top = 1.dp)
                     )
                 }
                 
                 if (location.averageRating > 0.0) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(top = 4.dp)
+                        modifier = Modifier.padding(top = 2.dp)
                     ) {
                         Icon(
                             Icons.Default.Star,
                             contentDescription = "Rating",
                             tint = MaterialTheme.colorScheme.secondary,
-                            modifier = Modifier.size(16.dp)
+                            modifier = Modifier.size(14.dp)
                         )
                         Text(
                             text = String.format("%.1f", location.averageRating),
                             style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.padding(start = 4.dp)
+                            modifier = Modifier.padding(start = 3.dp)
                         )
                         if (location.reviewCount > 0) {
                             Text(
