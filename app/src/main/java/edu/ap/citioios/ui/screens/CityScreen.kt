@@ -15,13 +15,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -41,6 +39,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -48,7 +47,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalInspectionMode
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -60,6 +58,7 @@ import edu.ap.citioios.ui.theme.CitioIOSTheme
 import edu.ap.citioios.ui.viewmodels.LocationViewModel
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -74,7 +73,7 @@ fun CityScreen(
     // Default center for map, center city geo?
     val defaultCenter = GeoPoint(51.230167, 4.416129)
     var center by remember { mutableStateOf(defaultCenter) }
-    var zoom by remember { mutableStateOf(15.0) }
+    var zoom by remember { mutableDoubleStateOf(15.0) }
     var mapViewInstance by remember { mutableStateOf<MapView?>(null) }
 
     // Load locations when screen opens
@@ -90,7 +89,7 @@ fun CityScreen(
                 title = { Text(city.name) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 }
             )
@@ -283,6 +282,8 @@ fun LocationListItem(
             .fillMaxWidth()
             .clickable { onClick() },
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -320,7 +321,7 @@ fun LocationListItem(
                             modifier = Modifier.size(14.dp)
                         )
                         Text(
-                            text = String.format("%.1f", location.averageRating),
+                            text = String.format(Locale.getDefault(),"%.1f", location.averageRating),
                             style = MaterialTheme.typography.bodySmall,
                             modifier = Modifier.padding(start = 3.dp)
                         )
