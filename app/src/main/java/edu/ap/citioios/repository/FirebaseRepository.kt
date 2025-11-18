@@ -9,6 +9,7 @@ import edu.ap.citioios.models.User
 import edu.ap.citioios.models.City
 import com.google.firebase.auth.userProfileChangeRequest
 import com.google.firebase.firestore.Query
+import edu.ap.citioios.models.Review
 import kotlinx.coroutines.tasks.await
 
 //TODO: Split repo in different repo's per subject, example authrepo, locationrepo, cityrepo
@@ -179,6 +180,23 @@ object FirebaseRepository {
                     Log.w("FirebaseAuth", "Login failed", task.exception)
                     task.exception?.let { onError(it) }
                 }
+            }
+    }
+    fun fetchReviewsForLocation(locationId: String, onSuccess: (List<Review>) -> Unit) {
+        db.collection("reviews")
+            .whereEqualTo("locationId", locationId)
+            .orderBy("createdAt", Query.Direction.DESCENDING)
+            .addSnapshotListener { querySnapshot, e ->
+                if (e != null) {
+                    println("Fout bij het ophalen van reviews: $e")
+                    return@addSnapshotListener
+                }
+
+                val reviews = querySnapshot?.documents?.mapNotNull { doc ->
+                    doc.toObject(Review::class.java)
+                } ?: emptyList()
+                
+                onSuccess(reviews)
             }
     }
 

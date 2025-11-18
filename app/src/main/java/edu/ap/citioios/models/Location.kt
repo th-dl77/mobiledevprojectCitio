@@ -24,7 +24,9 @@ data class Location(
     val cityId: String = "",
 
     val averageRating: Double = 0.0,
-    val reviewCount: Int = 0
+    val reviewCount: Int = 0,
+    val address: String = "",
+    val description: String = ""
 )
 
 // helper function for GeoPoint conversion

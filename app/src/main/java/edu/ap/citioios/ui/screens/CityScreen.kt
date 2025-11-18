@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
@@ -66,7 +67,8 @@ fun CityScreen(
     city: City,
     onBackClick: () -> Unit,
     onAddLocationClick: () -> Unit = {},
-    locationViewModel: LocationViewModel = viewModel()
+    locationViewModel: LocationViewModel = viewModel(),
+    onDetailScreenClick: (Location) -> Unit = {}
 ) {
     val locationUiState by locationViewModel.uiState.collectAsState()
     
@@ -233,7 +235,8 @@ fun CityScreen(
                         onClick = {
                             center = location.geoPoint.toOsmGeoPoint()
                             zoom = 18.0
-                        }
+                        },
+                        onDetailScreenClick = onDetailScreenClick
                     )
                 }
                 
@@ -275,7 +278,8 @@ fun CityScreen(
 @Composable
 fun LocationListItem(
     location: Location,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onDetailScreenClick: (Location) -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -288,10 +292,11 @@ fun LocationListItem(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Column(
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f).padding(end = 8.dp)
             ) {
                 Text(
                     text = location.name,
@@ -299,7 +304,6 @@ fun LocationListItem(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                
                 if (location.category.isNotBlank()) {
                     Text(
                         text = location.category,
@@ -308,7 +312,6 @@ fun LocationListItem(
                         modifier = Modifier.padding(top = 1.dp)
                     )
                 }
-                
                 if (location.averageRating > 0.0) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -334,6 +337,17 @@ fun LocationListItem(
                         }
                     }
                 }
+            }
+
+            IconButton(
+                onClick = { onDetailScreenClick(location) },
+                modifier = Modifier.size(40.dp)
+            ) {
+                Icon(
+                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = "View Details",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }

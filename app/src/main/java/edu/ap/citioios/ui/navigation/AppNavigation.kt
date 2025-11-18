@@ -9,9 +9,11 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.lifecycle.viewmodel.compose.viewModel
 import edu.ap.citioios.models.City
+import edu.ap.citioios.models.Location
 import edu.ap.citioios.ui.screens.AddCityScreen
 import edu.ap.citioios.ui.screens.CityScreen
 import edu.ap.citioios.ui.screens.HomeScreen
+import edu.ap.citioios.ui.screens.LocationDetailScreen
 import edu.ap.citioios.ui.screens.LoginScreen
 import edu.ap.citioios.ui.screens.RegisterScreen
 import edu.ap.citioios.ui.screens.StartScreen
@@ -27,6 +29,7 @@ fun AppNavigation(
     val authUiState by authViewModel.uiState.collectAsState()
     val context = LocalContext.current
     var selectedCity by remember { mutableStateOf<City?>(null) }
+    var selectedLocation by remember { mutableStateOf<Location?>(null) }
 
     // Navigate to HOME when user successfully logs in
     LaunchedEffect(authUiState.isLoggedIn) {
@@ -138,6 +141,24 @@ fun AppNavigation(
             selectedCity?.let { city ->
                 CityScreen(
                     city = city,
+                    onBackClick = {
+                        navController.popBackStack()
+                    },
+                    onDetailScreenClick = { location ->
+                        selectedLocation = location
+                        navController.navigate(AuthScreen.LOCATION_DETAIL.name)
+                    }
+                )
+            } ?: run {
+                LaunchedEffect(Unit) {
+                    navController.popBackStack()
+                }
+            }
+        }
+        composable(route = AuthScreen.LOCATION_DETAIL.name) {
+            selectedLocation?.let { location ->
+                LocationDetailScreen(
+                    location = location,
                     onBackClick = {
                         navController.popBackStack()
                     }
