@@ -7,5 +7,6 @@ enum class AuthScreen {
     HOME,
     CITY,
     ADD_CITY,
+    ADD_LOCATION,
     LOCATION_DETAIL
 }

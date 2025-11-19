@@ -1,102 +1,67 @@
 package edu.ap.citioios.ui.screens
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import edu.ap.citioios.models.City
 import edu.ap.citioios.ui.theme.CitioIOSTheme
-import kotlinx.coroutines.launch
+import edu.ap.citioios.ui.viewmodels.LocationViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddLocationScreen(
     city: City,
     onBackClick: () -> Unit,
-    onLocationSaved: () -> Unit = {}
+    onLocationAdded: () -> Unit,
+    locationViewModel: LocationViewModel = viewModel()
 ) {
+    val locationUiState by locationViewModel.uiState.collectAsState()
+    
     var locationName by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf("") }
-    var isDropdownExpanded by remember { mutableStateOf(false) }
-    var selectedLocationText by remember { mutableStateOf("Tap to select location on map") }
-    
-    val snackbarHostState = remember { SnackbarHostState() }
-    val coroutineScope = rememberCoroutineScope()
-    
-    //categories
-    val categories = listOf(
-        "Restaurant",
-        "Cafe",
-        "Bar",
-        "Fast Food",
-        "Fine Dining",
-        "Bakery",
-        "Food Truck",
-        "Other"
+    var street by remember { mutableStateOf("") }
+    var number by remember { mutableStateOf("") }
+    var nameError by remember { mutableStateOf("") }
+    var categoryError by remember { mutableStateOf("") }
+    var streetError by remember { mutableStateOf("") }
+    var numberError by remember { mutableStateOf("") }
+    var showCategoryDropdown by remember { mutableStateOf(false) }
+
+    val predefinedCategories = listOf(
+        "Restaurant", "Bar", "Café", "Museum", "Park", "Shopping",
+        "Hotel", "Attraction", "Entertainment", "Sports", "Healthcare", "Education"
     )
-    
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Add Location to ${city.name}") },
+                title = { Text("Nieuwe locatie toevoegen") },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Terug")
                     }
                 }
             )
-        },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
+        }
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(16.dp)
-                .verticalScroll(rememberScrollState()),
+                .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Information card
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(
@@ -107,139 +72,167 @@ fun AddLocationScreen(
                     modifier = Modifier.padding(16.dp)
                 ) {
                     Text(
-                        text = "Add New Location",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold
+                        text = "Locatie voor:",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                     Text(
-                        text = "Create a new location entry for ${city.name}. This feature will be fully functional in a future update.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.padding(top = 4.dp)
+                        text = city.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
+                    if (city.country.isNotBlank()) {
+                        Text(
+                            text = city.country,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
                 }
             }
-            
-            // Location name input
-            OutlinedTextField(
-                value = locationName,
-                onValueChange = { locationName = it },
-                label = { Text("Location Name") },
-                placeholder = { Text("Enter the name of the location") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
+
+            Text(
+                text = "Vul de details van de nieuwe locatie in",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             
-            // Categorie dropdown
+            
+            OutlinedTextField(
+                value = locationName,
+                onValueChange = { 
+                    locationName = it
+                    nameError = ""
+                },
+                label = { Text("Locatienaam *") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                isError = nameError.isNotEmpty(),
+                supportingText = if (nameError.isNotEmpty()) {
+                    { Text(nameError, color = MaterialTheme.colorScheme.error) }
+                } else null
+            )
+            
+        
             ExposedDropdownMenuBox(
-                expanded = isDropdownExpanded,
-                onExpandedChange = { isDropdownExpanded = it },
-                modifier = Modifier.fillMaxWidth()
+                expanded = showCategoryDropdown,
+                onExpandedChange = { showCategoryDropdown = it }
             ) {
                 OutlinedTextField(
                     value = selectedCategory,
-                    onValueChange = { },
+                    onValueChange = {},
                     readOnly = true,
-                    label = { Text("Category") },
-                    placeholder = { Text("Select a category") },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = isDropdownExpanded) },
-                    colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+                    label = { Text("Categorie *") },
+                    trailingIcon = {
+                        Icon(
+                            Icons.Default.KeyboardArrowDown,
+                            contentDescription = "Dropdown"
+                        )
+                    },
                     modifier = Modifier
-                        .menuAnchor()
                         .fillMaxWidth()
+                        .menuAnchor(),
+                    isError = categoryError.isNotEmpty(),
+                    supportingText = if (categoryError.isNotEmpty()) {
+                        { Text(categoryError, color = MaterialTheme.colorScheme.error) }
+                    } else null
                 )
+                
                 ExposedDropdownMenu(
-                    expanded = isDropdownExpanded,
-                    onDismissRequest = { isDropdownExpanded = false }
+                    expanded = showCategoryDropdown,
+                    onDismissRequest = { showCategoryDropdown = false }
                 ) {
-                    categories.forEach { category ->
+                    predefinedCategories.forEach { category ->
                         DropdownMenuItem(
                             text = { Text(category) },
                             onClick = {
                                 selectedCategory = category
-                                isDropdownExpanded = false
+                                categoryError = ""
+                                showCategoryDropdown = false
                             }
                         )
                     }
                 }
             }
+
+            Text(
+                text = "Adres",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Medium
+            )
             
-            // Map location picker, change to current location or something? Use phone location?
-            Card(
+            OutlinedTextField(
+                value = street,
+                onValueChange = { 
+                    street = it
+                    streetError = ""
+                },
+                label = { Text("Straatnaam *") },
                 modifier = Modifier.fillMaxWidth(),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp)
+                singleLine = true,
+                isError = streetError.isNotEmpty(),
+                supportingText = if (streetError.isNotEmpty()) {
+                    { Text(streetError, color = MaterialTheme.colorScheme.error) }
+                } else null
+            )
+            
+            OutlinedTextField(
+                value = number,
+                onValueChange = { 
+                    number = it
+                    numberError = ""
+                },
+                label = { Text("Huisnummer *") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                isError = numberError.isNotEmpty(),
+                supportingText = if (numberError.isNotEmpty()) {
+                    { Text(numberError, color = MaterialTheme.colorScheme.error) }
+                } else null
+            )
+
+            // Address preview
+            if (street.isNotBlank() || number.isNotBlank()) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier.padding(12.dp)
+                    ) {
+                        Text(
+                            text = "Adres voorvertoning:",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = "${city.country.ifBlank { "Land" }}, ${city.name}, ${street.ifBlank { "Straat" }} ${number.ifBlank { "Nr" }}",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
+            }
+            
+            if (locationUiState.errorMessage.isNotEmpty()) {
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer
+                    ),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
-                        text = "Location on Map",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    
-                    if (LocalInspectionMode.current) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(200.dp)
-                                .padding(top = 8.dp)
-                                .background(Color.LightGray),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(text = "Interactive Map (Preview)")
-                        }
-                    } else {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(200.dp)
-                                .padding(top = 8.dp)
-                                .background(MaterialTheme.colorScheme.surfaceVariant),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Icon(
-                                    Icons.Default.LocationOn,
-                                    contentDescription = "Location",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(bottom = 8.dp)
-                                )
-                                Text(
-                                    text = "Interactive map will be available here",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                    }
-                    
-                    OutlinedButton(
-                        onClick = {
-                            selectedLocationText = "Location selected: ${city.name} (52.2297° N, 21.0122° E)"
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 8.dp)
-                    ) {
-                        Icon(Icons.Default.LocationOn, contentDescription = null)
-                        Text(
-                            text = "Select Location on Map",
-                            modifier = Modifier.padding(start = 8.dp)
-                        )
-                    }
-                    
-                    Text(
-                        text = selectedLocationText,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 8.dp)
+                        text = locationUiState.errorMessage,
+                        modifier = Modifier.padding(16.dp),
+                        color = MaterialTheme.colorScheme.onErrorContainer
                     )
                 }
             }
             
-            // buttons
+            Spacer(modifier = Modifier.weight(1f))
+            
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -248,24 +241,60 @@ fun AddLocationScreen(
                     onClick = onBackClick,
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text("Cancel")
+                    Text("Annuleren")
                 }
                 
                 Button(
                     onClick = {
-                        coroutineScope.launch {
-                            snackbarHostState.showSnackbar(
-                                "Save functionality"
+                        // Validation
+                        var hasError = false
+                        
+                        if (locationName.trim().length < 2) {
+                            nameError = "Locatienaam moet minstens 2 karakters bevatten"
+                            hasError = true
+                        }
+                        
+                        if (selectedCategory.isBlank()) {
+                            categoryError = "Selecteer een categorie"
+                            hasError = true
+                        }
+                        
+                        if (street.trim().isBlank()) {
+                            streetError = "Straatnaam is verplicht"
+                            hasError = true
+                        }
+                        
+                        if (number.trim().isBlank()) {
+                            numberError = "Huisnummer is verplicht"
+                            hasError = true
+                        }
+                        
+                        if (!hasError) {
+                            locationViewModel.addLocation(
+                                name = locationName.trim(),
+                                category = selectedCategory,
+                                street = street.trim(),
+                                number = number.trim(),
+                                cityId = city.id,
+                                cityName = city.name,
+                                country = city.country.ifBlank { "Unknown" },
+                                onSuccess = onLocationAdded
                             )
                         }
                     },
                     modifier = Modifier.weight(1f),
-                    enabled = locationName.isNotBlank() && selectedCategory.isNotBlank()
+                    enabled = !locationUiState.isLoading
                 ) {
-                    Text("Save Location")
+                    if (locationUiState.isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Text("Opslaan")
+                    }
                 }
             }
-          
         }
     }
 }
@@ -278,10 +307,11 @@ fun AddLocationScreenPreview() {
             city = City(
                 id = "1",
                 name = "Antwerp",
-                description = "Beautiful historic city",
-                restaurantCount = 25
+                country = "Belgium",
+                description = "Beautiful historic city"
             ),
-            onBackClick = {}
+            onBackClick = {},
+            onLocationAdded = {}
         )
     }
 }
