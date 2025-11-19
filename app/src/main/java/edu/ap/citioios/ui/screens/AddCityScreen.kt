@@ -11,6 +11,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import edu.ap.citioios.ui.components.SearchableCountryDropdown
 import edu.ap.citioios.ui.theme.CitioIOSTheme
 import edu.ap.citioios.ui.viewmodels.CityViewModel
 
@@ -25,7 +26,9 @@ fun AddCityScreen(
     
     var cityName by remember { mutableStateOf("") }
     var cityDescription by remember { mutableStateOf("") }
+    var selectedCountry by remember { mutableStateOf("") }
     var nameError by remember { mutableStateOf("") }
+    var countryError by remember { mutableStateOf("") }
     
     Scaffold(
         topBar = {
@@ -67,6 +70,20 @@ fun AddCityScreen(
                 } else null
             )
             
+            SearchableCountryDropdown(
+                selectedCountry = selectedCountry,
+                onCountrySelected = { 
+                    selectedCountry = it
+                    countryError = ""
+                },
+                label = "Land *",
+                modifier = Modifier.fillMaxWidth(),
+                isError = countryError.isNotEmpty(),
+                supportingText = if (countryError.isNotEmpty()) {
+                    { Text(countryError, color = MaterialTheme.colorScheme.error) }
+                } else null
+            )
+            
             OutlinedTextField(
                 value = cityDescription,
                 onValueChange = { cityDescription = it },
@@ -105,16 +122,25 @@ fun AddCityScreen(
                 
                 Button(
                     onClick = {
+                        var hasError = false                   
                         if (cityName.trim().length < 2) {
                             nameError = "Stadnaam moet minstens 2 karakters bevatten"
-                            return@Button
+                            hasError = true
                         }
                         
-                        cityViewModel.addCity(
-                            name = cityName.trim(),
-                            description = cityDescription.trim(),
-                            onSuccess = onCityAdded
-                        )
+                        if (selectedCountry.isBlank()) {
+                            countryError = "Selecteer een land"
+                            hasError = true
+                        }
+                        
+                        if (!hasError) {
+                            cityViewModel.addCity(
+                                name = cityName.trim(),
+                                description = cityDescription.trim(),
+                                country = selectedCountry,
+                                onSuccess = onCityAdded
+                            )
+                        }
                     },
                     modifier = Modifier.weight(1f),
                     enabled = !cityUiState.isLoading && cityName.trim().isNotEmpty()

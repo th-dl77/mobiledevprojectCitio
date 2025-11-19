@@ -21,6 +21,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import edu.ap.citioios.models.City
 import edu.ap.citioios.ui.theme.CitioIOSTheme
 import edu.ap.citioios.ui.viewmodels.CityViewModel
+import edu.ap.citioios.utils.Countries
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -175,6 +176,12 @@ fun CityListItem(
                 text = city.name,
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = Countries.getCountryOrDefault(city.country),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(top = 2.dp)
             )
             if (city.description.isNotBlank()) {
                 Text(
