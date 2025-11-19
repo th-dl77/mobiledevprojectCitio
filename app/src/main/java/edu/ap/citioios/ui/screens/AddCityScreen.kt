@@ -11,9 +11,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import edu.ap.citioios.ui.components.SearchableCountryDropdown
 import edu.ap.citioios.ui.theme.CitioIOSTheme
 import edu.ap.citioios.ui.viewmodels.CityViewModel
+import edu.ap.citioios.utils.Countries
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -29,6 +30,7 @@ fun AddCityScreen(
     var selectedCountry by remember { mutableStateOf("") }
     var nameError by remember { mutableStateOf("") }
     var countryError by remember { mutableStateOf("") }
+    var showCountryDropdown by remember { mutableStateOf(false) }
     
     Scaffold(
         topBar = {
@@ -70,19 +72,46 @@ fun AddCityScreen(
                 } else null
             )
             
-            SearchableCountryDropdown(
-                selectedCountry = selectedCountry,
-                onCountrySelected = { 
-                    selectedCountry = it
-                    countryError = ""
-                },
-                label = "Land *",
-                modifier = Modifier.fillMaxWidth(),
-                isError = countryError.isNotEmpty(),
-                supportingText = if (countryError.isNotEmpty()) {
-                    { Text(countryError, color = MaterialTheme.colorScheme.error) }
-                } else null
-            )
+            ExposedDropdownMenuBox(
+                expanded = showCountryDropdown,
+                onExpandedChange = { showCountryDropdown = it }
+            ) {
+                OutlinedTextField(
+                    value = selectedCountry,
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Land *") },
+                    trailingIcon = {
+                        Icon(
+                            Icons.Default.KeyboardArrowDown,
+                            contentDescription = "Dropdown"
+                        )
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor(),
+                    isError = countryError.isNotEmpty(),
+                    supportingText = if (countryError.isNotEmpty()) {
+                        { Text(countryError, color = MaterialTheme.colorScheme.error) }
+                    } else null
+                )
+                
+                ExposedDropdownMenu(
+                    expanded = showCountryDropdown,
+                    onDismissRequest = { showCountryDropdown = false }
+                ) {
+                    Countries.allCountries.forEach { country ->
+                        DropdownMenuItem(
+                            text = { Text(country) },
+                            onClick = {
+                                selectedCountry = country
+                                countryError = ""
+                                showCountryDropdown = false
+                            }
+                        )
+                    }
+                }
+            }
             
             OutlinedTextField(
                 value = cityDescription,
