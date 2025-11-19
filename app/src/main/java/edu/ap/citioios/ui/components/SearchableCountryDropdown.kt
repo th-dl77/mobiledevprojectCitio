@@ -2,8 +2,8 @@ package edu.ap.citioios.ui.components
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Clear
@@ -110,8 +110,12 @@ fun SearchableCountryDropdown(
                     },
                     modifier = Modifier.heightIn(max = 200.dp)
                 ) {
-                    LazyColumn {
-                        items(filteredCountries.take(50)) { country ->
+                    Column(
+                        modifier = Modifier
+                            .heightIn(max = 200.dp)
+                            .verticalScroll(rememberScrollState())
+                    ) {
+                        filteredCountries.take(50).forEach { country ->
                             DropdownMenuItem(
                                 text = { 
                                     Text(
@@ -130,14 +134,12 @@ fun SearchableCountryDropdown(
                         }
                         
                         if (filteredCountries.size > 50) {
-                            item {
-                                Text(
-                                    text = "... en ${filteredCountries.size - 50} meer. blijf typen.",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                                )
-                            }
+                            Text(
+                                text = "... en ${filteredCountries.size - 50} meer. blijf typen.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                            )
                         }
                     }
                 }
