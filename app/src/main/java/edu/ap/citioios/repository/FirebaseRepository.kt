@@ -36,6 +36,27 @@ object FirebaseRepository {
             }
     }
 
+    fun checkLocationExists(
+        locationName: String,
+        cityId: String,
+        onResult: (Boolean) -> Unit,
+        onError: (Exception) -> Unit
+    ) {
+        db.collection("locations")
+            .whereEqualTo("name", locationName.trim())
+            .whereEqualTo("cityId", cityId)
+            .get()
+            .addOnSuccessListener { result ->
+                val exists = !result.isEmpty
+                Log.d("Firestore", "Location existence check for '$locationName' in city '$cityId': $exists")
+                onResult(exists)
+            }
+            .addOnFailureListener { e ->
+                Log.w("Firestore", "Error checking location existence for '$locationName'", e)
+                onError(e)
+            }
+    }
+
     // City operations
     fun fetchCities(
         onSuccess: (List<City>) -> Unit,

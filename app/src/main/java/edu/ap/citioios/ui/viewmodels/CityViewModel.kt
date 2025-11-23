@@ -66,7 +66,7 @@ class CityViewModel : ViewModel() {
         fetchCities()
     }
 
-    fun addCity(name: String, description: String, onSuccess: () -> Unit) {
+    fun addCity(name: String, description: String, country: String, onSuccess: () -> Unit) {
         _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = "")
 
         //check if city already exists
@@ -83,6 +83,7 @@ class CityViewModel : ViewModel() {
                     val newCity = City(
                         name = name,
                         description = description,
+                        country = country,
                         restaurantCount = 0 // Default  0, will be calculated later from locations in firebase conntected to ctiy
                     )
                     

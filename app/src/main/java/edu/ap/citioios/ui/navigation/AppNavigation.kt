@@ -11,6 +11,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import edu.ap.citioios.models.City
 import edu.ap.citioios.models.Location
 import edu.ap.citioios.ui.screens.AddCityScreen
+import edu.ap.citioios.ui.screens.AddLocationScreen
 import edu.ap.citioios.ui.screens.CityScreen
 import edu.ap.citioios.ui.screens.HomeScreen
 import edu.ap.citioios.ui.screens.LocationDetailScreen
@@ -144,9 +145,31 @@ fun AppNavigation(
                     onBackClick = {
                         navController.popBackStack()
                     },
+                    onAddLocationClick = {
+                        navController.navigate(AuthScreen.ADD_LOCATION.name)
+                    },
                     onDetailScreenClick = { location ->
                         selectedLocation = location
                         navController.navigate(AuthScreen.LOCATION_DETAIL.name)
+                    }
+                )
+            } ?: run {
+                LaunchedEffect(Unit) {
+                    navController.popBackStack()
+                }
+            }
+        }
+
+        composable(route = AuthScreen.ADD_LOCATION.name) {
+            selectedCity?.let { city ->
+                AddLocationScreen(
+                    city = city,
+                    onBackClick = {
+                        navController.popBackStack()
+                    },
+                    onLocationAdded = {
+                        navController.popBackStack()
+                        Toast.makeText(context, "Locatie toegevoegd!", Toast.LENGTH_SHORT).show()
                     }
                 )
             } ?: run {
