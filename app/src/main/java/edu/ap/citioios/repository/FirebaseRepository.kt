@@ -1,5 +1,6 @@
 package edu.ap.citioios.repository
 
+import android.net.Uri
 import android.util.Log
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
@@ -10,6 +11,7 @@ import edu.ap.citioios.models.City
 import com.google.firebase.auth.userProfileChangeRequest
 import com.google.firebase.firestore.Query
 import edu.ap.citioios.models.Review
+import com.google.firebase.storage.ktx.storage
 import kotlinx.coroutines.tasks.await
 
 //TODO: Split repo in different repo's per subject, example authrepo, locationrepo, cityrepo
@@ -17,6 +19,7 @@ import kotlinx.coroutines.tasks.await
 object FirebaseRepository {
     private val db = Firebase.firestore
     private val auth = Firebase.auth
+    private val storage = Firebase.storage
 
 
     fun saveNewLocationToFirestore(
@@ -219,6 +222,23 @@ object FirebaseRepository {
                 
                 onSuccess(reviews)
             }
+    }
+
+    // Upload location image
+    suspend fun uploadLocationImage(imageUri: Uri, locationId: String): String {
+        try {
+            val storageRef = storage.reference
+            val imageRef = storageRef.child("locations/images/$locationId.jpg")
+            
+            imageRef.putFile(imageUri).await()
+            val downloadUrl = imageRef.downloadUrl.await()
+            
+            Log.d("FirebaseStorage", "Image uploaded successfully: $downloadUrl")
+            return downloadUrl.toString()
+        } catch (e: Exception) {
+            Log.w("FirebaseStorage", "Error uploading image", e)
+            throw e
+        }
     }
 
 }
