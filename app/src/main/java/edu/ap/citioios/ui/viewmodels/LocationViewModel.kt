@@ -1,7 +1,8 @@
 package edu.ap.citioios.ui.viewmodels
 
+import android.app.Application
 import android.net.Uri
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import edu.ap.citioios.models.Location
 import edu.ap.citioios.repository.FirebaseRepository
@@ -23,7 +24,7 @@ data class LocationUiState(
     val errorMessage: String = ""
 )
 
-class LocationViewModel : ViewModel() {
+class LocationViewModel(application: Application) : AndroidViewModel(application) {
     private val _uiState = MutableStateFlow(LocationUiState())
     val uiState: StateFlow<LocationUiState> = _uiState
 
@@ -139,7 +140,7 @@ class LocationViewModel : ViewModel() {
                         viewModelScope.launch {
                             try {
                                 // Upload image and get download URL
-                                val imageUrl = FirebaseRepository.uploadLocationImage(imageUri, tempLocationId)
+                                val imageUrl = FirebaseRepository.compressImageToBase64(getApplication(), imageUri)
                                 
                                 // Create location with image URL
                                 createAndSaveLocation(
