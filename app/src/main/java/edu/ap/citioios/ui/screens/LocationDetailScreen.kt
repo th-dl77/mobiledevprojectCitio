@@ -18,9 +18,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
 import edu.ap.citioios.models.Location
 import edu.ap.citioios.models.Review
 import edu.ap.citioios.models.toOsmGeoPoint
@@ -68,6 +70,25 @@ fun LocationDetailScreen(
                 .padding(paddingValues),
             contentPadding = PaddingValues(vertical = 8.dp)
         ) {
+            item {
+                if (location.imageUrl.isNotEmpty()) {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                    ) {
+                        AsyncImage(
+                            model = location.imageUrl,
+                            contentDescription = "Foto van ${location.name}",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(250.dp),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
+                }
+            }
+            
             item {
                 Card(
                     modifier = Modifier
