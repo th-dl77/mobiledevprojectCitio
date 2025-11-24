@@ -12,6 +12,8 @@ data class CityUiState(
     val filteredCities: List<City> = emptyList(),
     val isLoading: Boolean = false,
     val searchQuery: String = "",
+    val selectedCountry: String? = null, // null means "All Countries"
+    val availableCountries: List<String> = emptyList(),
     val errorMessage: String = ""
 )
 
@@ -28,9 +30,11 @@ class CityViewModel : ViewModel() {
     
         FirebaseRepository.fetchCities(
             onSuccess = { cities ->
+                val uniqueCountries = cities.map { it.country }.distinct().sorted()
                 _uiState.value = _uiState.value.copy(
                     cities = cities,
-                    filteredCities = filterCities(cities, _uiState.value.searchQuery),
+                    availableCountries = uniqueCountries,
+                    filteredCities = filterCities(cities, _uiState.value.searchQuery, _uiState.value.selectedCountry),
                     isLoading = false
                 )
             },
@@ -46,18 +50,31 @@ class CityViewModel : ViewModel() {
     fun updateSearchQuery(query: String) {
         _uiState.value = _uiState.value.copy(
             searchQuery = query,
-            filteredCities = filterCities(_uiState.value.cities, query)
+            filteredCities = filterCities(_uiState.value.cities, query, _uiState.value.selectedCountry)
         )
     }
 
-    private fun filterCities(cities: List<City>, query: String): List<City> {
-        if (query.isBlank()) {
-            return cities
+    fun updateCountryFilter(country: String?) {
+        _uiState.value = _uiState.value.copy(
+            selectedCountry = country,
+            filteredCities = filterCities(_uiState.value.cities, _uiState.value.searchQuery, country)
+        )
+    }
+
+    private fun filterCities(cities: List<City>, query: String, country: String?): List<City> {
+        var filtered = cities
+        
+        if (country != null) {
+            filtered = filtered.filter { it.country == country }
         }
-        return cities.filter { city ->
-            city.name.contains(query, ignoreCase = true) ||
-            city.description.contains(query, ignoreCase = true)
+        
+        if (query.isNotBlank()) {
+            filtered = filtered.filter { city ->
+                city.name.contains(query, ignoreCase = true) ||
+                city.description.contains(query, ignoreCase = true)
+            }
         }
+        return filtered
     }
 
     fun refreshCities() {

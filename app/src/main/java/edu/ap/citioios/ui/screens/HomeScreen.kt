@@ -12,12 +12,16 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -29,6 +33,9 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
@@ -115,6 +122,12 @@ fun HomeScreen(
                 singleLine = true
             )
 
+            CountryFilterDropdown(
+                selectedCountry = cityUiState.selectedCountry,
+                availableCountries = cityUiState.availableCountries,
+                onCountrySelected = { cityViewModel.updateCountryFilter(it) },
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 0.dp)
+            )
 
             // Loading indicator
             if (cityUiState.isLoading) {
@@ -169,6 +182,64 @@ fun HomeScreen(
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun CountryFilterDropdown(
+    selectedCountry: String?,
+    availableCountries: List<String>,
+    onCountrySelected: (String?) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val displayText = selectedCountry?.let { Countries.getCountryOrDefault(it) } ?: "Alle landen"
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded },
+        modifier = modifier
+    ) {
+        OutlinedTextField(
+            value = displayText,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text("Filter op land") },
+            trailingIcon = {
+                Icon(
+                    imageVector = Icons.Default.ArrowDropDown,
+                    contentDescription = "Dropdown"
+                )
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .menuAnchor(),
+            singleLine = true,
+            colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
+        )
+        
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            DropdownMenuItem(
+                text = { Text("Alle landen") },
+                onClick = {
+                    onCountrySelected(null)
+                    expanded = false
+                }
+            )
+            
+            availableCountries.forEach { country ->
+                DropdownMenuItem(
+                    text = { Text(Countries.getCountryOrDefault(country)) },
+                    onClick = {
+                        onCountrySelected(country)
+                        expanded = false
+                    }
+                )
             }
         }
     }
