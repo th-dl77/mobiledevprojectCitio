@@ -51,7 +51,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
-import coil.compose.AsyncImage
+import coil3.compose.AsyncImage
 import edu.ap.citioios.models.City
 import edu.ap.citioios.ui.theme.CitioIOSTheme
 import edu.ap.citioios.ui.viewmodels.LocationViewModel
