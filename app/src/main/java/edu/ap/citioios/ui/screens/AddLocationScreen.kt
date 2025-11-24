@@ -1,22 +1,61 @@
 package edu.ap.citioios.ui.screens
 
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import android.Manifest
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.core.content.FileProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil3.compose.AsyncImage
 import edu.ap.citioios.models.City
 import edu.ap.citioios.ui.theme.CitioIOSTheme
 import edu.ap.citioios.ui.viewmodels.LocationViewModel
+import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -26,6 +65,7 @@ fun AddLocationScreen(
     onLocationAdded: () -> Unit,
     locationViewModel: LocationViewModel = viewModel()
 ) {
+    val context = LocalContext.current
     val locationUiState by locationViewModel.uiState.collectAsState()
     
     var locationName by remember { mutableStateOf("") }
@@ -37,6 +77,39 @@ fun AddLocationScreen(
     var streetError by remember { mutableStateOf("") }
     var numberError by remember { mutableStateOf("") }
     var showCategoryDropdown by remember { mutableStateOf(false) }
+    var capturedImageUri by remember { mutableStateOf<Uri?>(null) }
+    var photoFile by remember { mutableStateOf<File?>(null) }
+    var showPermissionDeniedMessage by remember { mutableStateOf(false) }
+
+    fun createImageFile(): File {
+        val storageDir = context.cacheDir.resolve("images").apply { mkdirs() }
+        return File(storageDir, "location_${System.currentTimeMillis()}.jpg")
+    }
+
+    val takePictureLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture()
+    ) { success ->
+        if (success && photoFile != null) {
+            capturedImageUri = Uri.fromFile(photoFile)
+        }
+    }
+
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            val file = createImageFile()
+            photoFile = file
+            val uri = FileProvider.getUriForFile(
+                context,
+                "edu.ap.citioios.fileprovider",
+                file
+            )
+            takePictureLauncher.launch(uri)
+        } else {
+            showPermissionDeniedMessage = true
+        }
+    }
 
     val predefinedCategories = listOf(
         "Restaurant", "Bar", "Café", "Museum", "Park", "Shopping",
@@ -59,6 +132,7 @@ fun AddLocationScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
+                .verticalScroll(rememberScrollState())
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
@@ -215,6 +289,104 @@ fun AddLocationScreen(
                     }
                 }
             }
+
+            // Photo Section
+            Text(
+                text = "Foto (optioneel)",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Medium
+            )
+
+            if (capturedImageUri != null) {
+                // Photo preview 
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Toegevoegde foto",
+                                style = MaterialTheme.typography.labelMedium
+                            )
+                            IconButton(
+                                onClick = {
+                                    capturedImageUri = null
+                                    photoFile = null
+                                }
+                            ) {
+                                Icon(
+                                    Icons.Default.Close,
+                                    contentDescription = "Verwijder foto"
+                                )
+                            }
+                        }
+                        
+                        AsyncImage(
+                            model = capturedImageUri,
+                            contentDescription = "Locatiefoto",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(200.dp),
+                            contentScale = ContentScale.Crop
+                        )
+                        
+                        OutlinedButton(
+                            onClick = {
+                                cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(
+                                Icons.Default.CameraAlt,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Nieuwe foto maken")
+                        }
+                    }
+                }
+            } else {
+                // Add photo button
+                OutlinedButton(
+                    onClick = {
+                        cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(
+                        Icons.Default.CameraAlt,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Foto toevoegen")
+                }
+            }
+
+            if (showPermissionDeniedMessage) {
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = "Camera toestemming is geweigerd. Ga naar de app-instellingen om deze toe te staan.",
+                        modifier = Modifier.padding(16.dp),
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
             
             if (locationUiState.errorMessage.isNotEmpty()) {
                 Card(
@@ -231,7 +403,7 @@ fun AddLocationScreen(
                 }
             }
             
-            Spacer(modifier = Modifier.weight(1f))
+            Spacer(modifier = Modifier.height(24.dp))
             
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -278,6 +450,7 @@ fun AddLocationScreen(
                                 cityId = city.id,
                                 cityName = city.name,
                                 country = city.country.ifBlank { "Unknown" },
+                                imageUri = capturedImageUri,
                                 onSuccess = onLocationAdded
                             )
                         }

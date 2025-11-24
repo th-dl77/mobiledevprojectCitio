@@ -1,14 +1,16 @@
 package edu.ap.citioios.ui.viewmodels
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import android.net.Uri
+import android.util.Log
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.firestore.GeoPoint
 import edu.ap.citioios.models.Location
 import edu.ap.citioios.repository.FirebaseRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.combine
-import android.util.Log
-import com.google.firebase.firestore.GeoPoint
+import kotlinx.coroutines.launch
 
 data class LocationUiState(
     val locations: List<Location> = emptyList(),
@@ -21,7 +23,7 @@ data class LocationUiState(
     val errorMessage: String = ""
 )
 
-class LocationViewModel : ViewModel() {
+class LocationViewModel(application: Application) : AndroidViewModel(application) {
     private val _uiState = MutableStateFlow(LocationUiState())
     val uiState: StateFlow<LocationUiState> = _uiState
 
@@ -109,6 +111,7 @@ class LocationViewModel : ViewModel() {
         cityId: String,
         cityName: String,
         country: String,
+        imageUri: Uri? = null,
         onSuccess: () -> Unit
     ) {
         _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = "")
@@ -128,39 +131,89 @@ class LocationViewModel : ViewModel() {
                     val currentUser = FirebaseRepository.getCurrentUser()
                     val formattedAddress = "$country, $cityName, $street $number"
                     
-                    val newLocation = Location(
-                        name = name,
-                        category = category,
-                        address = formattedAddress,
-                        cityId = cityId,
-                        addedByUserId = currentUser?.uid ?: "",
-                        geoPoint = GeoPoint(0.0, 0.0), // Default coordinates for now, get from osm api?
-                        averageRating = 0.0,
-                        reviewCount = 0,
-                        imageUrl = "", //Add from camera, use camerX libray
-                        description = ""
-                    )
+                    // Gen temp location ID for image upload
+                    val tempLocationId = "${cityId}_${System.currentTimeMillis()}"
                     
-                    FirebaseRepository.saveNewLocationToFirestore(
-                        location = newLocation,
-                        onSuccess = {
-                            _uiState.value = _uiState.value.copy(isLoading = false)
-                            loadLocationsForCity(cityId) // Refresh
-                            onSuccess()
-                        },
-                        onError = { exception ->
-                            _uiState.value = _uiState.value.copy(
-                                isLoading = false,
-                                errorMessage = "Fout bij het opslaan van de locatie: ${exception.message}"
-                            )
+                    // Handle image upload 
+                    if (imageUri != null) {
+                        viewModelScope.launch {
+                            try {
+                                // Upload image and get download URL
+                                val imageUrl = FirebaseRepository.compressImageToBase64(getApplication(), imageUri)
+                                
+                                // Create location with image URL
+                                createAndSaveLocation(
+                                    name = name,
+                                    category = category,
+                                    formattedAddress = formattedAddress,
+                                    cityId = cityId,
+                                    currentUser = currentUser,
+                                    imageUrl = imageUrl,
+                                    onSuccess = onSuccess
+                                )
+                            } catch (e: Exception) {
+                                _uiState.value = _uiState.value.copy(
+                                    isLoading = false,
+                                    errorMessage = "Fout bij het uploaden van de afbeelding: ${e.message}"
+                                )
+                            }
                         }
-                    )
+                    } else {
+                        // Create location without image
+                        createAndSaveLocation(
+                            name = name,
+                            category = category,
+                            formattedAddress = formattedAddress,
+                            cityId = cityId,
+                            currentUser = currentUser,
+                            imageUrl = "",
+                            onSuccess = onSuccess
+                        )
+                    }
                 }
             },
             onError = { exception ->
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     errorMessage = "Fout bij het controleren van de locatie: ${exception.message}"
+                )
+            }
+        )
+    }
+
+    private fun createAndSaveLocation(
+        name: String,
+        category: String,
+        formattedAddress: String,
+        cityId: String,
+        currentUser: edu.ap.citioios.models.User?,
+        imageUrl: String,
+        onSuccess: () -> Unit
+    ) {
+        val newLocation = Location(
+            name = name,
+            category = category,
+            address = formattedAddress,
+            cityId = cityId,
+            addedByUserId = currentUser?.uid ?: "",
+            geoPoint = GeoPoint(0.0, 0.0), // Default coordinates for now, get from osm api?
+            averageRating = 0.0,
+            reviewCount = 0,
+            imageUrl = imageUrl,
+            description = ""
+        )
+        
+        FirebaseRepository.saveNewLocationToFirestore(
+            location = newLocation,
+            onSuccess = {
+                _uiState.value = _uiState.value.copy(isLoading = false)
+                loadLocationsForCity(cityId) // Refresh
+                onSuccess()
+            },
+            onError = { exception ->
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    errorMessage = "Fout bij het opslaan van de locatie: ${exception.message}"
                 )
             }
         )

@@ -1,5 +1,10 @@
 package edu.ap.citioios.repository
 
+import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.net.Uri
+import android.util.Base64
 import android.util.Log
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
@@ -11,6 +16,8 @@ import com.google.firebase.auth.userProfileChangeRequest
 import com.google.firebase.firestore.Query
 import edu.ap.citioios.models.Review
 import kotlinx.coroutines.tasks.await
+import java.io.ByteArrayOutputStream
+import kotlin.math.min
 
 //TODO: Split repo in different repo's per subject, example authrepo, locationrepo, cityrepo
 
@@ -219,6 +226,49 @@ object FirebaseRepository {
                 
                 onSuccess(reviews)
             }
+    }
+
+    // Upload location image
+    suspend fun compressImageToBase64(context: Context, imageUri: Uri): String {
+        try {
+            // Read the image from URI
+            val inputStream = context.contentResolver.openInputStream(imageUri)
+            val originalBitmap = BitmapFactory.decodeStream(inputStream)
+            inputStream?.close()
+            
+            if (originalBitmap == null) {
+                throw Exception("Failed to decode image")
+            }
+            
+            val maxDimension = 800
+            val width = originalBitmap.width
+            val height = originalBitmap.height
+            val scale = min(maxDimension.toFloat() / width, maxDimension.toFloat() / height)
+            
+            val newWidth = (width * scale).toInt()
+            val newHeight = (height * scale).toInt()
+            
+            val resizedBitmap = Bitmap.createScaledBitmap(originalBitmap, newWidth, newHeight, true)
+            originalBitmap.recycle() // Free memory
+            
+            val outputStream = ByteArrayOutputStream()
+            resizedBitmap.compress(Bitmap.CompressFormat.JPEG, 60, outputStream)
+            resizedBitmap.recycle() // Free memory
+            
+            val byteArray = outputStream.toByteArray()
+            outputStream.close()
+            
+            val base64String = Base64.encodeToString(byteArray, Base64.NO_WRAP)
+            
+            val dataUri = "data:image/jpeg;base64,$base64String"
+            
+            Log.d("FirebaseRepository", "Image compressed successfully. Size: ${byteArray.size / 1024} KB")
+            
+            return dataUri
+        } catch (e: Exception) {
+            Log.w("FirebaseRepository", "Error compressing image", e)
+            throw e
+        }
     }
 
 }

@@ -16,11 +16,15 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import android.util.Log
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil3.compose.AsyncImage
+import coil3.compose.AsyncImagePainter
 import edu.ap.citioios.models.Location
 import edu.ap.citioios.models.Review
 import edu.ap.citioios.models.toOsmGeoPoint
@@ -68,6 +72,81 @@ fun LocationDetailScreen(
                 .padding(paddingValues),
             contentPadding = PaddingValues(vertical = 8.dp)
         ) {
+            item {
+                if (location.imageUrl.isNotEmpty()) {
+                    Log.d("LocationDetailImage", "Attempting to load image for: ${location.name}")
+                    Log.d("LocationDetailImage", "Image URL length: ${location.imageUrl.length}")
+                    Log.d("LocationDetailImage", "Image URL prefix: ${location.imageUrl.take(50)}")
+                    
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(250.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            var imageState by remember { mutableStateOf<AsyncImagePainter.State>(AsyncImagePainter.State.Empty) }
+                            
+                            AsyncImage(
+                                model = location.imageUrl,
+                                contentDescription = "Foto van ${location.name}",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop,
+                                onState = { state ->
+                                    imageState = state
+                                    when (state) {
+                                        is AsyncImagePainter.State.Loading -> {
+                                            Log.d("LocationDetailImage", "Image is loading...")
+                                        }
+                                        is AsyncImagePainter.State.Success -> {
+                                            Log.d("LocationDetailImage", "Image loaded successfully!")
+                                        }
+                                        is AsyncImagePainter.State.Error -> {
+                                            Log.e("LocationDetailImage", "Image load error: ${state.result.throwable.message}")
+                                            Log.e("LocationDetailImage", "Error details: ", state.result.throwable)
+                                        }
+                                        else -> {
+                                            Log.d("LocationDetailImage", "Image state: $state")
+                                        }
+                                    }
+                                }
+                            )
+                            
+                            // Show loading indicator
+                            when (imageState) {
+                                is AsyncImagePainter.State.Loading -> {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(48.dp)
+                                    )
+                                }
+                                is AsyncImagePainter.State.Error -> {
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.Center
+                                    ) {
+                                        Text(
+                                            text = "Afbeelding laden mislukt",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.error
+                                        )
+                                        Text(
+                                            text = "Check Logcat voor details",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                                else -> {}
+                            }
+                        }
+                    }
+                }
+            }
+            
             item {
                 Card(
                     modifier = Modifier
