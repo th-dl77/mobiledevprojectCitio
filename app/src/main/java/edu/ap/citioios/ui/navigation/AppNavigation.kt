@@ -1,13 +1,18 @@
 package edu.ap.citioios.ui.navigation
 
 import android.widget.Toast
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import androidx.lifecycle.viewmodel.compose.viewModel
 import edu.ap.citioios.models.City
 import edu.ap.citioios.models.Location
 import edu.ap.citioios.ui.screens.AddCityScreen
@@ -19,7 +24,6 @@ import edu.ap.citioios.ui.screens.LoginScreen
 import edu.ap.citioios.ui.screens.RegisterScreen
 import edu.ap.citioios.ui.screens.StartScreen
 import edu.ap.citioios.ui.viewmodels.AuthViewModel
-import edu.ap.citioios.ui.viewmodels.CityViewModel
 
 @Composable
 fun AppNavigation(

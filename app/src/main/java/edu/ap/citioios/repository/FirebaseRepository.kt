@@ -6,16 +6,15 @@ import android.graphics.BitmapFactory
 import android.net.Uri
 import android.util.Base64
 import android.util.Log
-import com.google.firebase.firestore.ktx.firestore
-import com.google.firebase.ktx.Firebase
-import edu.ap.citioios.models.Location
 import com.google.firebase.auth.ktx.auth
-import edu.ap.citioios.models.User
-import edu.ap.citioios.models.City
 import com.google.firebase.auth.userProfileChangeRequest
 import com.google.firebase.firestore.Query
+import com.google.firebase.firestore.ktx.firestore
+import com.google.firebase.ktx.Firebase
+import edu.ap.citioios.models.City
+import edu.ap.citioios.models.Location
 import edu.ap.citioios.models.Review
-import kotlinx.coroutines.tasks.await
+import edu.ap.citioios.models.User
 import java.io.ByteArrayOutputStream
 import kotlin.math.min
 
