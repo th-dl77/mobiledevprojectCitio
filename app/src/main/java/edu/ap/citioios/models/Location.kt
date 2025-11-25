@@ -14,7 +14,7 @@ data class Location(
     val geoPoint: FirebaseGeoPoint = FirebaseGeoPoint(0.0, 0.0),
     val imageUrl: String = "",
 
-    val category: String = "",
+    val categories: List<String> = emptyList(),
 
     val addedByUserId: String = "",
 

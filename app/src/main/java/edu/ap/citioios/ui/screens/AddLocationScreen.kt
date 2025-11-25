@@ -19,9 +19,12 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -69,7 +72,7 @@ fun AddLocationScreen(
     val locationUiState by locationViewModel.uiState.collectAsState()
     
     var locationName by remember { mutableStateOf("") }
-    var selectedCategory by remember { mutableStateOf("") }
+    var selectedCategories by remember { mutableStateOf(setOf<String>()) }
     var street by remember { mutableStateOf("") }
     var number by remember { mutableStateOf("") }
     var nameError by remember { mutableStateOf("") }
@@ -194,10 +197,10 @@ fun AddLocationScreen(
                 onExpandedChange = { showCategoryDropdown = it }
             ) {
                 OutlinedTextField(
-                    value = selectedCategory,
+                    value = if (selectedCategories.isEmpty()) "" else "${selectedCategories.size} geselecteerd",
                     onValueChange = {},
                     readOnly = true,
-                    label = { Text("Categorie *") },
+                    label = { Text("Categorieën *") },
                     trailingIcon = {
                         Icon(
                             Icons.Default.KeyboardArrowDown,
@@ -219,11 +222,51 @@ fun AddLocationScreen(
                 ) {
                     predefinedCategories.forEach { category ->
                         DropdownMenuItem(
-                            text = { Text(category) },
+                            text = {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Checkbox(
+                                        checked = selectedCategories.contains(category),
+                                        onCheckedChange = null
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(category)
+                                }
+                            },
                             onClick = {
-                                selectedCategory = category
+                                selectedCategories = if (selectedCategories.contains(category)) {
+                                    selectedCategories - category
+                                } else {
+                                    selectedCategories + category
+                                }
                                 categoryError = ""
-                                showCategoryDropdown = false
+                            }
+                        )
+                    }
+                }
+            }
+
+            if (selectedCategories.isNotEmpty()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    selectedCategories.forEach { category ->
+                        AssistChip(
+                            onClick = {
+                                selectedCategories = selectedCategories - category
+                            },
+                            label = { Text(category) },
+                            trailingIcon = {
+                                Icon(
+                                    Icons.Default.Close,
+                                    contentDescription = "Verwijder $category",
+                                    modifier = Modifier.size(18.dp)
+                                )
                             }
                         )
                     }
@@ -426,8 +469,8 @@ fun AddLocationScreen(
                             hasError = true
                         }
                         
-                        if (selectedCategory.isBlank()) {
-                            categoryError = "Selecteer een categorie"
+                        if (selectedCategories.isEmpty()) {
+                            categoryError = "Selecteer minstens één categorie"
                             hasError = true
                         }
                         
@@ -444,7 +487,7 @@ fun AddLocationScreen(
                         if (!hasError) {
                             locationViewModel.addLocation(
                                 name = locationName.trim(),
-                                category = selectedCategory,
+                                categories = selectedCategories.toList(),
                                 street = street.trim(),
                                 number = number.trim(),
                                 cityId = city.id,

@@ -40,7 +40,8 @@ class LocationViewModel(application: Application) : AndroidViewModel(application
             cityId = cityId,
             onSuccess = { locations ->
                 Log.d("LocationViewModel", "Loaded ${locations.size} locations for city: $cityId")
-                val categories = locations.map { it.category }
+                val categories = locations
+                    .flatMap { it.categories }
                     .filter { it.isNotBlank() }
                     .distinct()
                     .sorted()
@@ -86,7 +87,9 @@ class LocationViewModel(application: Application) : AndroidViewModel(application
 
         if (!currentState.selectedCategory.isNullOrBlank()) {
             filtered = filtered.filter { location ->
-                location.category.equals(currentState.selectedCategory, ignoreCase = true)
+                location.categories.any { cat ->
+                    cat.equals(currentState.selectedCategory, ignoreCase = true)
+                }
             }
         }
 
@@ -94,7 +97,7 @@ class LocationViewModel(application: Application) : AndroidViewModel(application
             val query = currentState.searchQuery.lowercase()
             filtered = filtered.filter { location ->
                 location.name.lowercase().contains(query) ||
-                        location.category.lowercase().contains(query)
+                        location.categories.any { it.lowercase().contains(query) }
             }
         }
 
@@ -107,7 +110,7 @@ class LocationViewModel(application: Application) : AndroidViewModel(application
 
     fun addLocation(
         name: String,
-        category: String,
+        categories: List<String>,
         street: String,
         number: String,
         cityId: String,
@@ -141,7 +144,7 @@ class LocationViewModel(application: Application) : AndroidViewModel(application
                                 val imageUrl = FirebaseRepository.compressImageToBase64(getApplication(), imageUri)
                                 createAndSaveLocation(
                                     name = name,
-                                    category = category,
+                                    categories = categories,
                                     formattedAddress = formattedAddress,
                                     cityId = cityId,
                                     currentUser = currentUser,
@@ -159,7 +162,7 @@ class LocationViewModel(application: Application) : AndroidViewModel(application
                         viewModelScope.launch {
                             createAndSaveLocation(
                                 name = name,
-                                category = category,
+                                categories = categories,
                                 formattedAddress = formattedAddress,
                                 cityId = cityId,
                                 currentUser = currentUser,
@@ -181,7 +184,7 @@ class LocationViewModel(application: Application) : AndroidViewModel(application
 
     private suspend fun createAndSaveLocation(
         name: String,
-        category: String,
+        categories: List<String>,
         formattedAddress: String,
         cityId: String,
         currentUser: User?,
@@ -198,7 +201,7 @@ class LocationViewModel(application: Application) : AndroidViewModel(application
 
         val newLocation = Location(
             name = name,
-            category = category,
+            categories = categories,
             address = formattedAddress,
             cityId = cityId,
             addedByUserId = currentUser?.uid ?: "",
