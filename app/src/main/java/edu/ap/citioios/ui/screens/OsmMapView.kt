@@ -12,7 +12,7 @@ import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
 
-private fun addMarkers(mapView: MapView, locations: List<Location>) {
+private fun addMarkers(mapView: MapView, locations: List<Location>,  onMarkerClick: (Location) -> Unit) {
     val markerIcon = mapView.context.getDrawable(org.osmdroid.library.R.drawable.marker_default)
 
     locations.forEach { location ->
@@ -22,6 +22,12 @@ private fun addMarkers(mapView: MapView, locations: List<Location>) {
         marker.icon = markerIcon
 
         marker.title = location.name
+
+        marker.setOnMarkerClickListener { _, _ ->
+            onMarkerClick(location)
+            marker.showInfoWindow()
+            true
+        }
 
         mapView.overlays.add(marker)
     }
@@ -33,7 +39,8 @@ fun OsmMapView(
     center: GeoPoint,
     zoom: Double,
     locations: List<Location> = emptyList(),
-    onMapViewCreated: (MapView) -> Unit = {}
+    onMapViewCreated: (MapView) -> Unit = {},
+    onMarkerClick: (Location) -> Unit = {}
 ) {
     AndroidView(
         modifier = modifier,
@@ -46,7 +53,7 @@ fun OsmMapView(
                 setMultiTouchControls(true)
 
                 locationOverlay.enableMyLocation()
-                addMarkers(this, locations)
+                addMarkers(this, locations, onMarkerClick)
 
                 this.overlays.add(locationOverlay)
                 onMapViewCreated(this)
@@ -63,7 +70,7 @@ fun OsmMapView(
 
             view.overlays.removeAll { it is Marker }
 
-            addMarkers(view, locations)
+            addMarkers(view, locations, onMarkerClick)
 
             view.invalidate()
         }

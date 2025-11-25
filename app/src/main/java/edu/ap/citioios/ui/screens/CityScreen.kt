@@ -221,6 +221,9 @@ fun CityScreen(
                         locations = locationUiState.filteredLocations,
                         onMapViewCreated = {
                             mapViewInstance = it
+                        },
+                        onMarkerClick = { location ->
+                            calculateAndShowDistance(location)
                         }
                     )
                 }
