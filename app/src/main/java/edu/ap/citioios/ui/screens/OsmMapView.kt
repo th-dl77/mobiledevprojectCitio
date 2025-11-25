@@ -9,6 +9,8 @@ import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
+import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
+import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
 
 private fun addMarkers(mapView: MapView, locations: List<Location>) {
     val markerIcon = mapView.context.getDrawable(org.osmdroid.library.R.drawable.marker_default)
@@ -38,12 +40,15 @@ fun OsmMapView(
         factory = { context ->
             MapView(context).apply {
                 setTileSource(TileSourceFactory.MAPNIK)
+                val locationOverlay = MyLocationNewOverlay(GpsMyLocationProvider(context), this)
                 controller.setZoom(zoom)
                 controller.setCenter(center)
                 setMultiTouchControls(true)
 
+                locationOverlay.enableMyLocation()
                 addMarkers(this, locations)
 
+                this.overlays.add(locationOverlay)
                 onMapViewCreated(this)
             }
         },

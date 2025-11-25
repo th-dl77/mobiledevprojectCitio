@@ -1,17 +1,16 @@
 package edu.ap.citioios.ui.screens
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.widget.Toast
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -20,46 +19,24 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableDoubleStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.core.app.ActivityCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.google.android.gms.location.LocationServices
 import edu.ap.citioios.models.City
 import edu.ap.citioios.models.Location
 import edu.ap.citioios.models.toOsmGeoPoint
-import edu.ap.citioios.ui.theme.CitioIOSTheme
 import edu.ap.citioios.ui.viewmodels.LocationViewModel
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
-import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -70,15 +47,85 @@ fun CityScreen(
     locationViewModel: LocationViewModel = viewModel(),
     onDetailScreenClick: (Location) -> Unit = {}
 ) {
+    val context = LocalContext.current
     val locationUiState by locationViewModel.uiState.collectAsState()
-    
-    // Default center for map, center city geo?
+
+    val fusedLocationClient = remember { LocationServices.getFusedLocationProviderClient(context) }
+    var userLocation by remember { mutableStateOf<GeoPoint?>(null) }
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    val requestPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        if (isGranted) {
+            try {
+                fusedLocationClient.lastLocation.addOnSuccessListener { location ->
+                    if (location != null) {
+                        userLocation = GeoPoint(location.latitude, location.longitude)
+                    }
+                }
+            } catch (e: SecurityException) {
+                e.printStackTrace()
+            }
+        } else {
+            Toast.makeText(context, "Location permission needed to calculate distance", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        if (ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            fusedLocationClient.lastLocation.addOnSuccessListener { location ->
+                if (location != null) {
+                    userLocation = GeoPoint(location.latitude, location.longitude)
+                }
+            }
+        }
+    }
+
+    fun calculateAndShowDistance(targetLocation: Location) {
+        if (ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+            return
+        }
+
+        if (userLocation == null) {
+            fusedLocationClient.lastLocation.addOnSuccessListener { location ->
+                if (location != null) {
+                    userLocation = GeoPoint(location.latitude, location.longitude)
+                    val targetGeo = targetLocation.geoPoint.toOsmGeoPoint()
+                    val distanceMeters = userLocation!!.distanceToAsDouble(targetGeo)
+                    val distanceText = if (distanceMeters > 1000) {
+                        String.format("%.2f km", distanceMeters / 1000)
+                    } else {
+                        String.format("%.0f meters", distanceMeters)
+                    }
+                    Toast.makeText(context, "Distance to ${targetLocation.name}: $distanceText", Toast.LENGTH_LONG).show()
+                } else {
+                    Toast.makeText(context, "Searching for your location... please wait.", Toast.LENGTH_SHORT).show()
+                }
+            }
+            return
+        }
+
+        userLocation?.let { currentUser ->
+            val targetGeo = targetLocation.geoPoint.toOsmGeoPoint()
+            val distanceMeters = currentUser.distanceToAsDouble(targetGeo)
+
+            val distanceText = if (distanceMeters > 1000) {
+                String.format("%.2f km", distanceMeters / 1000)
+            } else {
+                String.format("%.0f meters", distanceMeters)
+            }
+
+            Toast.makeText(context, "Distance to ${targetLocation.name}: $distanceText", Toast.LENGTH_LONG).show()
+        }
+    }
+
     val defaultCenter = GeoPoint(51.230167, 4.416129)
     var center by remember { mutableStateOf(defaultCenter) }
     var zoom by remember { mutableDoubleStateOf(15.0) }
     var mapViewInstance by remember { mutableStateOf<MapView?>(null) }
 
-    // Load locations when screen opens
     LaunchedEffect(city.id) {
         if (city.id.isNotBlank()) {
             locationViewModel.loadLocationsForCity(city.id)
@@ -86,6 +133,7 @@ fun CityScreen(
     }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text(city.name) },
@@ -235,11 +283,13 @@ fun CityScreen(
                         onClick = {
                             center = location.geoPoint.toOsmGeoPoint()
                             zoom = 18.0
+
+                            calculateAndShowDistance(location)
                         },
                         onDetailScreenClick = onDetailScreenClick
                     )
                 }
-                
+
                 if (locationUiState.filteredLocations.isEmpty() && !locationUiState.isLoading && locationUiState.error == null) {
                     item {
                         Card(
@@ -252,9 +302,9 @@ fun CityScreen(
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 Text(
-                                    text = if (locationUiState.searchQuery.isBlank() && locationUiState.selectedCategory == null) 
-                                        "No locations found for this city" 
-                                    else 
+                                    text = if (locationUiState.searchQuery.isBlank() && locationUiState.selectedCategory == null)
+                                        "No locations found for this city"
+                                    else
                                         "No locations match your filters",
                                     style = MaterialTheme.typography.bodyLarge
                                 )
@@ -296,7 +346,7 @@ fun LocationListItem(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Column(
-                modifier = Modifier.weight(1f).padding(end = 8.dp)
+                modifier = Modifier.weight(1f)
             ) {
                 Text(
                     text = location.name,
@@ -308,63 +358,17 @@ fun LocationListItem(
                     Text(
                         text = location.category,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(top = 1.dp)
+                        color = MaterialTheme.colorScheme.secondary
                     )
-                }
-                if (location.averageRating > 0.0) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(top = 2.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.Star,
-                            contentDescription = "Rating",
-                            tint = MaterialTheme.colorScheme.secondary,
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Text(
-                            text = String.format(Locale.getDefault(),"%.1f", location.averageRating),
-                            style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.padding(start = 3.dp)
-                        )
-                        if (location.reviewCount > 0) {
-                            Text(
-                                text = " (${location.reviewCount})",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
                 }
             }
 
-            IconButton(
-                onClick = { onDetailScreenClick(location) },
-                modifier = Modifier.size(40.dp)
-            ) {
+            IconButton(onClick = { onDetailScreenClick(location) }) {
                 Icon(
-                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                    contentDescription = "View Details",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = "Details"
                 )
             }
         }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun CityScreenPreview() {
-    CitioIOSTheme {
-        CityScreen(
-            city = City(
-                id = "1",
-                name = "Antwerp",
-                description = "Beautiful historic city with great restaurants",
-                restaurantCount = 25
-            ),
-            onBackClick = {}
-        )
     }
 }
