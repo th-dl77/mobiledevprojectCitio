@@ -16,15 +16,32 @@ import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 
 
+private fun scaleBitmap(bitmap: android.graphics.Bitmap, width: Int, height: Int): android.graphics.Bitmap {
+    return android.graphics.Bitmap.createScaledBitmap(bitmap, width, height, true)
+}
+
 private fun addMarkers(
     mapView: MapView,
     locations: List<Location>,
     onMarkerClick: (Location) -> Unit
 ) {
-    val customIcon = ContextCompat.getDrawable(
-        mapView.context,
-        R.drawable.ic_custom_pin
-    )
+    val customBitmap = ContextCompat.getDrawable(mapView.context, R.drawable.ic_custom_pin)
+        ?.let { drawable ->
+            val raw = android.graphics.Bitmap.createBitmap(
+                drawable.intrinsicWidth,
+                drawable.intrinsicHeight,
+                android.graphics.Bitmap.Config.ARGB_8888
+            )
+            val canvas = android.graphics.Canvas(raw)
+            drawable.setBounds(0, 0, canvas.width, canvas.height)
+            drawable.draw(canvas)
+
+            scaleBitmap(raw, 64, 64)
+        }
+
+    val customIcon = customBitmap?.let { bitmap ->
+        android.graphics.drawable.BitmapDrawable(mapView.resources, bitmap)
+    }
 
     locations.forEach { location ->
         if (location.geoPoint.latitude == 0.0 &&
