@@ -221,7 +221,7 @@ fun CountryFilterDropdown(
             },
             modifier = Modifier
                 .fillMaxWidth()
-                .menuAnchor(),
+                .menuAnchor(type = ExposedDropdownMenuAnchorType.PrimaryNotEditable, enabled = true),
             singleLine = true,
             colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
         )
@@ -292,4 +292,3 @@ fun CityListItem(
         }
     }
 }
-
