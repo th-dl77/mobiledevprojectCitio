@@ -178,10 +178,10 @@ fun LocationDetailScreen(
                             Spacer(Modifier.height(8.dp))
                         }
 
-                        if (location.category.isNotBlank()) {
+                        if (location.categories.isNotEmpty()) {
                             DetailItem(
-                                label = "Category",
-                                value = location.category
+                                label = "Categories",
+                                value = location.categories.joinToString(", ")
                             )
                         }
                         if (location.address.isNotBlank()) {
@@ -398,7 +398,7 @@ fun LocationDetailScreenPreview() {
                 id = "loc1",
                 cityId = "city1",
                 name = "MAS Museum",
-                category = "Museum",
+                categories = listOf("Museum"),
                 imageUrl = "test",
                 averageRating = 4.5,
                 reviewCount = 128,
