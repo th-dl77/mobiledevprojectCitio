@@ -365,9 +365,9 @@ fun LocationListItem(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                if (location.category.isNotBlank()) {
+                if (location.categories.isNotEmpty()) {
                     Text(
-                        text = location.category,
+                        text = location.categories.joinToString(", "),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.secondary
                     )

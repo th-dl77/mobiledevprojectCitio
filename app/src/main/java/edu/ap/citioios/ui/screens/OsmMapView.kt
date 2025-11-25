@@ -57,7 +57,7 @@ private fun addMarkers(
             setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
 
             title = location.name
-            snippet = location.category
+            snippet = location.categories.joinToString(", ")
 
             setOnMarkerClickListener { m, _ ->
                 onMarkerClick(location)
