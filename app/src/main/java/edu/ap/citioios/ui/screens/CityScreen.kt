@@ -23,6 +23,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
@@ -121,9 +122,15 @@ fun CityScreen(
         }
     }
 
-    val defaultCenter = GeoPoint(51.230167, 4.416129)
-    var center by remember { mutableStateOf(defaultCenter) }
-    var zoom by remember { mutableDoubleStateOf(15.0) }
+    var center by remember {
+        mutableStateOf(
+            GeoPoint(
+                city.latitude.takeIf { it != 0.0 } ?: 51.230167,
+                city.longitude.takeIf { it != 0.0 } ?: 4.416129
+            )
+        )
+    }
+    var zoom by remember { mutableDoubleStateOf(14.0) }
     var mapViewInstance by remember { mutableStateOf<MapView?>(null) }
 
     LaunchedEffect(city.id) {
@@ -213,6 +220,7 @@ fun CityScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(200.dp)
+                        .clipToBounds()
                 ) {
                     OsmMapView(
                         modifier = Modifier.fillMaxSize(),
