@@ -7,10 +7,17 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.firestore.GeoPoint
 import edu.ap.citioios.models.Location
+import edu.ap.citioios.models.User
 import edu.ap.citioios.repository.FirebaseRepository
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.json.JSONArray
+import java.net.HttpURLConnection
+import java.net.URL
+import java.net.URLEncoder
 
 data class LocationUiState(
     val locations: List<Location> = emptyList(),
@@ -77,14 +84,12 @@ class LocationViewModel(application: Application) : AndroidViewModel(application
         val currentState = _uiState.value
         var filtered = currentState.locations
 
-        // Filter by category
         if (!currentState.selectedCategory.isNullOrBlank()) {
             filtered = filtered.filter { location ->
                 location.category.equals(currentState.selectedCategory, ignoreCase = true)
             }
         }
 
-        // Filter by search query
         if (currentState.searchQuery.isNotBlank()) {
             val query = currentState.searchQuery.lowercase()
             filtered = filtered.filter { location ->
@@ -113,7 +118,6 @@ class LocationViewModel(application: Application) : AndroidViewModel(application
     ) {
         _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = "")
 
-        // Check if location already exists in this city
         FirebaseRepository.checkLocationExists(
             locationName = name,
             cityId = cityId,
@@ -124,18 +128,17 @@ class LocationViewModel(application: Application) : AndroidViewModel(application
                         errorMessage = "Een locatie met deze naam bestaat al in deze stad"
                     )
                 } else {
-                    // doesn't exist, create it
                     val currentUser = FirebaseRepository.getCurrentUser()
-                    val formattedAddress = "$country, $cityName, $street $number"
-                    // Gen temp location ID for image upload
-                    val tempLocationId = "${cityId}_${System.currentTimeMillis()}"
-                    // Handle image upload 
+
+                    val rawAddress = "$street $number, $cityName, $country"
+                    val formattedAddress = rawAddress.trim().replace(Regex("^[ ,]+|[ ,]+$"), "")
+
+                    Log.d("LocationViewModel", "Preparing to add location with address: $formattedAddress")
+
                     if (imageUri != null) {
                         viewModelScope.launch {
                             try {
-                                // Upload image and get download URL
                                 val imageUrl = FirebaseRepository.compressImageToBase64(getApplication(), imageUri)
-                                // Create location with image URL
                                 createAndSaveLocation(
                                     name = name,
                                     category = category,
@@ -153,16 +156,17 @@ class LocationViewModel(application: Application) : AndroidViewModel(application
                             }
                         }
                     } else {
-                        // Create location without image
-                        createAndSaveLocation(
-                            name = name,
-                            category = category,
-                            formattedAddress = formattedAddress,
-                            cityId = cityId,
-                            currentUser = currentUser,
-                            imageUrl = "",
-                            onSuccess = onSuccess
-                        )
+                        viewModelScope.launch {
+                            createAndSaveLocation(
+                                name = name,
+                                category = category,
+                                formattedAddress = formattedAddress,
+                                cityId = cityId,
+                                currentUser = currentUser,
+                                imageUrl = "",
+                                onSuccess = onSuccess
+                            )
+                        }
                     }
                 }
             },
@@ -175,22 +179,30 @@ class LocationViewModel(application: Application) : AndroidViewModel(application
         )
     }
 
-    private fun createAndSaveLocation(
+    private suspend fun createAndSaveLocation(
         name: String,
         category: String,
         formattedAddress: String,
         cityId: String,
-        currentUser: edu.ap.citioios.models.User?,
+        currentUser: User?,
         imageUrl: String,
         onSuccess: () -> Unit
     ) {
+        val coordinates = getCoordinatesFromNominatim(formattedAddress)
+
+        if (coordinates.latitude == 0.0 && coordinates.longitude == 0.0) {
+            Log.e("LocationViewModel", "WARNING: Coordinates are (0,0). Geocoding failed for address: $formattedAddress")
+        } else {
+            Log.d("LocationViewModel", "Geocoding Success: ${coordinates.latitude}, ${coordinates.longitude}")
+        }
+
         val newLocation = Location(
             name = name,
             category = category,
             address = formattedAddress,
             cityId = cityId,
             addedByUserId = currentUser?.uid ?: "",
-            geoPoint = GeoPoint(0.0, 0.0),
+            geoPoint = coordinates,
             averageRating = 0.0,
             reviewCount = 0,
             imageUrl = imageUrl,
@@ -223,6 +235,68 @@ class LocationViewModel(application: Application) : AndroidViewModel(application
             }
         )
     }
+
+    private suspend fun getCoordinatesFromNominatim(address: String): GeoPoint {
+        return withContext(Dispatchers.IO) {
+            try {
+                if (address.isBlank()) {
+                    Log.e("LocationViewModel", "Address is empty, skipping geocoding.")
+                    return@withContext GeoPoint(0.0, 0.0)
+                }
+
+                val cleanedAddress = address.trim()
+
+                val encodedAddress = URLEncoder.encode(cleanedAddress, "UTF-8")
+                val urlString = "https://nominatim.openstreetmap.org/search?q=$encodedAddress&format=json&limit=1"
+
+                Log.d("LocationViewModel", "Requesting URL: $urlString")
+
+                val url = URL(urlString)
+                val connection = url.openConnection() as HttpURLConnection
+                connection.requestMethod = "GET"
+
+                connection.setRequestProperty("User-Agent", "CitioIOS/1.0 (edu.ap.citioios)")
+                connection.setRequestProperty("Accept", "application/json")
+                connection.setRequestProperty("Accept-Language", "en")
+                connection.setRequestProperty("Referer", "https://citioios.app")
+                connection.setRequestProperty("From", "student@ap.be")  // replace with your email
+
+                connection.connectTimeout = 8000
+                connection.readTimeout = 8000
+
+                val responseCode = connection.responseCode
+                Log.d("LocationViewModel", "HTTP response code: $responseCode")
+
+                if (responseCode == HttpURLConnection.HTTP_OK) {
+                    val responseText = connection.inputStream
+                        .bufferedReader()
+                        .use { it.readText() }
+
+                    Log.d("LocationViewModel", "Nominatim Response: $responseText")
+
+                    val jsonArray = JSONArray(responseText)
+
+                    if (jsonArray.length() > 0) {
+                        val firstResult = jsonArray.getJSONObject(0)
+                        val lat = firstResult.getString("lat").toDouble()
+                        val lon = firstResult.getString("lon").toDouble()
+                        return@withContext GeoPoint(lat, lon)
+                    } else {
+                        Log.e("LocationViewModel", "Nominatim returned NO results for: $cleanedAddress")
+                    }
+                } else {
+                    val errorMsg = connection.errorStream?.bufferedReader()?.use { it.readText() }
+                    Log.e("LocationViewModel", "Nominatim HTTP Error $responseCode: $errorMsg")
+                }
+
+            } catch (e: Exception) {
+                Log.e("LocationViewModel", "Nominatim Geocoding Exception", e)
+            }
+
+            return@withContext GeoPoint(0.0, 0.0)
+        }
+    }
+
 
     fun clearError() {
         _uiState.value = _uiState.value.copy(errorMessage = "")
