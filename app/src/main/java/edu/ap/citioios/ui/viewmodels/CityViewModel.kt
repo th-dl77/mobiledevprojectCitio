@@ -1,11 +1,21 @@
 package edu.ap.citioios.ui.viewmodels
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import edu.ap.citioios.models.City
 import edu.ap.citioios.repository.FirebaseRepository
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.json.JSONArray
+import org.osmdroid.util.GeoPoint
+import java.net.HttpURLConnection
+import java.net.URL
+import java.net.URLEncoder
 
 data class CityUiState(
     val cities: List<City> = emptyList(),
@@ -84,7 +94,6 @@ class CityViewModel : ViewModel() {
     fun addCity(name: String, description: String, country: String, onSuccess: () -> Unit) {
         _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = "")
 
-        //check if city already exists
         FirebaseRepository.checkCityExists(
             cityName = name,
             onResult = { exists ->
@@ -94,28 +103,39 @@ class CityViewModel : ViewModel() {
                         errorMessage = "Een stad met deze naam bestaat al"
                     )
                 } else {
-                    // City doesn't exist,, save it
-                    val newCity = City(
-                        name = name,
-                        description = description,
-                        country = country,
-                        restaurantCount = 0 // Default  0, will be calculated later from locations in firebase conntected to ctiy
-                    )
-                    
-                    FirebaseRepository.saveCityToFirestore(
-                        city = newCity,
-                        onSuccess = {
-                            _uiState.value = _uiState.value.copy(isLoading = false)
-                            fetchCities() // Refresh the cities list
-                            onSuccess()
-                        },
-                        onError = { exception ->
+                    viewModelScope.launch {
+                        val geoPoint = geocodeCity(name, country)
+                        if (geoPoint != null) {
+                            val newCity = City(
+                                name = name,
+                                description = description,
+                                country = country,
+                                latitude = geoPoint.latitude,
+                                longitude = geoPoint.longitude,
+                                restaurantCount = 0
+                            )
+
+                            FirebaseRepository.saveCityToFirestore(
+                                city = newCity,
+                                onSuccess = {
+                                    _uiState.value = _uiState.value.copy(isLoading = false)
+                                    fetchCities()
+                                    onSuccess()
+                                },
+                                onError = { exception ->
+                                    _uiState.value = _uiState.value.copy(
+                                        isLoading = false,
+                                        errorMessage = "Fout bij het opslaan van de stad: ${exception.message}"
+                                    )
+                                }
+                            )
+                        } else {
                             _uiState.value = _uiState.value.copy(
                                 isLoading = false,
-                                errorMessage = "Fout bij het opslaan van de stad: ${exception.message}"
+                                errorMessage = "Kon coördinaten niet vinden voor deze stad"
                             )
                         }
-                    )
+                    }
                 }
             },
             onError = { exception ->
@@ -126,6 +146,47 @@ class CityViewModel : ViewModel() {
             }
         )
     }
+
+
+    suspend fun geocodeCity(name: String, country: String): GeoPoint? =
+        withContext(Dispatchers.IO) {
+            try {
+                val query = URLEncoder.encode("${name.trim()}, ${country.trim()}", "UTF-8")
+                val urlString = "https://nominatim.openstreetmap.org/search?q=$query&format=json&limit=1"
+
+                val url = URL(urlString)
+                val connection = url.openConnection() as HttpURLConnection
+                connection.requestMethod = "GET"
+
+                connection.setRequestProperty("User-Agent", "CitioIOS/1.0 (edu.ap.citioios)")
+                connection.setRequestProperty("Accept", "application/json")
+                connection.setRequestProperty("Accept-Language", "en")
+                connection.setRequestProperty("From", "s151582@ap.be")
+
+                connection.connectTimeout = 8000
+                connection.readTimeout = 8000
+
+                if (connection.responseCode == HttpURLConnection.HTTP_OK) {
+                    val response = connection.inputStream.bufferedReader().readText()
+                    val json = JSONArray(response)
+
+                    if (json.length() > 0) {
+                        val item = json.getJSONObject(0)
+                        val lat = item.getString("lat").toDouble()
+                        val lon = item.getString("lon").toDouble()
+                        return@withContext GeoPoint(lat, lon)
+                    } else {
+                        Log.e("CityViewModel", "Nominatim returned no results for $name, $country")
+                    }
+                } else {
+                    Log.e("CityViewModel", "Nominatim HTTP Error: ${connection.responseCode}")
+                }
+            } catch (e: Exception) {
+                Log.e("CityViewModel", "Geocoding exception for $name, $country", e)
+            }
+
+            return@withContext null
+        }
 
     fun clearError() {
         _uiState.value = _uiState.value.copy(errorMessage = "")

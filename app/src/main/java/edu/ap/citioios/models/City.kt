@@ -13,5 +13,8 @@ data class City(
     val restaurantCount: Int = 0,
     val country: String = "",
     @ServerTimestamp
-    val createdAt: Date? = null
+    val createdAt: Date? = null,
+
+    val latitude: Double = 0.0,
+    val longitude: Double = 0.0,
 )

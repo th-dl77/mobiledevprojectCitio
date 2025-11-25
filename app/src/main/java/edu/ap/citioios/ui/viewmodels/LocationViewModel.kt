@@ -258,8 +258,7 @@ class LocationViewModel(application: Application) : AndroidViewModel(application
                 connection.setRequestProperty("User-Agent", "CitioIOS/1.0 (edu.ap.citioios)")
                 connection.setRequestProperty("Accept", "application/json")
                 connection.setRequestProperty("Accept-Language", "en")
-                connection.setRequestProperty("Referer", "https://citioios.app")
-                connection.setRequestProperty("From", "student@ap.be")  // replace with your email
+                connection.setRequestProperty("From", "s151582@ap.be")
 
                 connection.connectTimeout = 8000
                 connection.readTimeout = 8000
@@ -296,7 +295,6 @@ class LocationViewModel(application: Application) : AndroidViewModel(application
             return@withContext GeoPoint(0.0, 0.0)
         }
     }
-
 
     fun clearError() {
         _uiState.value = _uiState.value.copy(errorMessage = "")
