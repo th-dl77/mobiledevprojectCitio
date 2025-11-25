@@ -29,17 +29,14 @@ class LocationViewModel(application: Application) : AndroidViewModel(application
 
     fun loadLocationsForCity(cityId: String) {
         _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-        
         FirebaseRepository.fetchLocationsByCityId(
             cityId = cityId,
             onSuccess = { locations ->
                 Log.d("LocationViewModel", "Loaded ${locations.size} locations for city: $cityId")
-                
                 val categories = locations.map { it.category }
                     .filter { it.isNotBlank() }
                     .distinct()
                     .sorted()
-                
                 _uiState.value = _uiState.value.copy(
                     locations = locations,
                     availableCategories = categories,
@@ -92,7 +89,7 @@ class LocationViewModel(application: Application) : AndroidViewModel(application
             val query = currentState.searchQuery.lowercase()
             filtered = filtered.filter { location ->
                 location.name.lowercase().contains(query) ||
-                location.category.lowercase().contains(query)
+                        location.category.lowercase().contains(query)
             }
         }
 
@@ -130,17 +127,14 @@ class LocationViewModel(application: Application) : AndroidViewModel(application
                     // doesn't exist, create it
                     val currentUser = FirebaseRepository.getCurrentUser()
                     val formattedAddress = "$country, $cityName, $street $number"
-                    
                     // Gen temp location ID for image upload
                     val tempLocationId = "${cityId}_${System.currentTimeMillis()}"
-                    
                     // Handle image upload 
                     if (imageUri != null) {
                         viewModelScope.launch {
                             try {
                                 // Upload image and get download URL
                                 val imageUrl = FirebaseRepository.compressImageToBase64(getApplication(), imageUri)
-                                
                                 // Create location with image URL
                                 createAndSaveLocation(
                                     name = name,
@@ -196,19 +190,30 @@ class LocationViewModel(application: Application) : AndroidViewModel(application
             address = formattedAddress,
             cityId = cityId,
             addedByUserId = currentUser?.uid ?: "",
-            geoPoint = GeoPoint(0.0, 0.0), // Default coordinates for now, get from osm api?
+            geoPoint = GeoPoint(0.0, 0.0),
             averageRating = 0.0,
             reviewCount = 0,
             imageUrl = imageUrl,
             description = ""
         )
-        
+
         FirebaseRepository.saveNewLocationToFirestore(
             location = newLocation,
             onSuccess = {
-                _uiState.value = _uiState.value.copy(isLoading = false)
-                loadLocationsForCity(cityId) // Refresh
-                onSuccess()
+                FirebaseRepository.incrementCityRestaurantCount(
+                    cityId = cityId,
+                    onSuccess = {
+                        _uiState.value = _uiState.value.copy(isLoading = false)
+                        loadLocationsForCity(cityId)
+                        onSuccess()
+                    },
+                    onError = { e ->
+                        Log.e("LocationViewModel", "Failed to increment count", e)
+                        _uiState.value = _uiState.value.copy(isLoading = false)
+                        loadLocationsForCity(cityId)
+                        onSuccess()
+                    }
+                )
             },
             onError = { exception ->
                 _uiState.value = _uiState.value.copy(

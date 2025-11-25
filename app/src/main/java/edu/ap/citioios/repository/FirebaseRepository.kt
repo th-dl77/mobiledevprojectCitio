@@ -271,4 +271,23 @@ object FirebaseRepository {
         }
     }
 
+    fun incrementCityRestaurantCount(
+        cityId: String,
+        onSuccess: () -> Unit,
+        onError: (Exception) -> Unit
+    ) {
+        val db = Firebase.firestore
+        val cityRef = db.collection("cities").document(cityId)
+
+        db.runTransaction { transaction ->
+            val snapshot = transaction.get(cityRef)
+            val currentCount = snapshot.getLong("restaurantCount") ?: 0
+            transaction.update(cityRef, "restaurantCount", currentCount + 1)
+        }.addOnSuccessListener {
+            onSuccess()
+        }.addOnFailureListener { e ->
+            onError(e)
+        }
+    }
+
 }
