@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -55,6 +56,7 @@ fun HomeScreen(
     onLogout: () -> Unit,
     onCityClick: (City) -> Unit,
     onAddCityClick: () -> Unit,
+    onProfileClick: () -> Unit,
     cityViewModel: CityViewModel = viewModel()
 ) {
     val cityUiState by cityViewModel.uiState.collectAsState()
@@ -68,6 +70,12 @@ fun HomeScreen(
             TopAppBar(
                 title = { Text("Citio - Kies een stad") },
                 actions = {
+                    IconButton(onClick = onProfileClick) {
+                        Icon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = "Profiel"
+                        )
+                    }
                     IconButton(onClick = onLogout) {
                         Icon(
                             painter = painterResource(android.R.drawable.ic_menu_revert),

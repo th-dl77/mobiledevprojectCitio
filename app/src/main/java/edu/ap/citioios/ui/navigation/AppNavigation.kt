@@ -21,6 +21,7 @@ import edu.ap.citioios.ui.screens.CityScreen
 import edu.ap.citioios.ui.screens.HomeScreen
 import edu.ap.citioios.ui.screens.LocationDetailScreen
 import edu.ap.citioios.ui.screens.LoginScreen
+import edu.ap.citioios.ui.screens.ProfileScreen
 import edu.ap.citioios.ui.screens.RegisterScreen
 import edu.ap.citioios.ui.screens.StartScreen
 import edu.ap.citioios.ui.viewmodels.AuthViewModel
@@ -126,6 +127,23 @@ fun AppNavigation(
                 },
                 onAddCityClick = {
                     navController.navigate(AuthScreen.ADD_CITY.name)
+                },
+                onProfileClick = {
+                    navController.navigate(AuthScreen.PROFILE.name)
+                }
+            )
+        }
+
+        composable(route = AuthScreen.PROFILE.name) {
+            ProfileScreen(
+                onBackClick = {
+                    navController.popBackStack()
+                },
+                onLogout = {
+                    authViewModel.logout()
+                    navController.navigate(AuthScreen.START.name) {
+                        popUpTo(AuthScreen.START.name) { inclusive = false }
+                    }
                 }
             )
         }

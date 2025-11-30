@@ -289,4 +289,23 @@ object FirebaseRepository {
         }
     }
 
+    fun fetchUserLocationCount(
+        userId: String,
+        onSuccess: (Int) -> Unit,
+        onError: (Exception) -> Unit
+    ) {
+        db.collection("locations")
+            .whereEqualTo("addedByUserId", userId)
+            .get()
+            .addOnSuccessListener { result ->
+                val count = result.size()
+                Log.d("Firestore", "Location count for user $userId: $count")
+                onSuccess(count)
+            }
+            .addOnFailureListener { e ->
+                Log.w("Firestore", "Error fetching location count for user $userId", e)
+                onError(e)
+            }
+    }
+
 }
