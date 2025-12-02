@@ -12,7 +12,9 @@ import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import edu.ap.citioios.models.City
+import edu.ap.citioios.models.Conversation
 import edu.ap.citioios.models.Location
+import edu.ap.citioios.models.Message
 import edu.ap.citioios.models.Review
 import edu.ap.citioios.models.User
 import java.io.ByteArrayOutputStream
@@ -304,6 +306,139 @@ object FirebaseRepository {
             }
             .addOnFailureListener { e ->
                 Log.w("Firestore", "Error fetching location count for user $userId", e)
+                onError(e)
+            }
+    }
+
+    fun getOrCreateConversation(
+        currentUserId: String,
+        currentUserEmail: String,
+        otherUserId: String,
+        otherUserEmail: String,
+        onSuccess: (String) -> Unit,
+        onError: (Exception) -> Unit
+    ) {
+        val participants = listOf(currentUserId, otherUserId).sorted()
+        val conversationId = participants.joinToString("_")
+
+        val conversationRef = db.collection("conversations").document(conversationId)
+        
+        conversationRef.get()
+            .addOnSuccessListener { document ->
+                if (document.exists()) {
+                    Log.d("Firestore", "Conversation already exists: $conversationId")
+                    onSuccess(conversationId)
+                } else {
+                    val conversation = Conversation(
+                        id = conversationId,
+                        participants = participants,
+                        participantEmails = mapOf(
+                            currentUserId to currentUserEmail,
+                            otherUserId to otherUserEmail
+                        ),
+                        lastMessage = "",
+                        lastMessageSenderId = ""
+                    )
+                    
+                    conversationRef.set(conversation)
+                        .addOnSuccessListener {
+                            Log.d("Firestore", "New conversation created: $conversationId")
+                            onSuccess(conversationId)
+                        }
+                        .addOnFailureListener { e ->
+                            Log.w("Firestore", "Error creating conversation", e)
+                            onError(e)
+                        }
+                }
+            }
+            .addOnFailureListener { e ->
+                Log.w("Firestore", "Error checking conversation", e)
+                onError(e)
+            }
+    }
+
+    fun fetchConversations(
+        userId: String,
+        onSuccess: (List<Conversation>) -> Unit,
+        onError: (Exception) -> Unit
+    ) {
+        db.collection("conversations")
+            .whereArrayContains("participants", userId)
+            .orderBy("lastMessageTime", Query.Direction.DESCENDING)
+            .addSnapshotListener { querySnapshot, e ->
+                if (e != null) {
+                    Log.w("Firestore", "Error fetching conversations", e)
+                    onError(e)
+                    return@addSnapshotListener
+                }
+
+                val conversations = querySnapshot?.documents?.mapNotNull { doc ->
+                    doc.toObject(Conversation::class.java)
+                } ?: emptyList()
+                
+                Log.d("Firestore", "Conversations fetched: ${conversations.size}")
+                onSuccess(conversations)
+            }
+    }
+
+    fun fetchMessages(
+        conversationId: String,
+        onSuccess: (List<Message>) -> Unit,
+        onError: (Exception) -> Unit
+    ) {
+        db.collection("messages")
+            .document(conversationId)
+            .collection("messages")
+            .orderBy("timestamp", Query.Direction.ASCENDING)
+            .addSnapshotListener { querySnapshot, e ->
+                if (e != null) {
+                    Log.w("Firestore", "Error fetching messages", e)
+                    onError(e)
+                    return@addSnapshotListener
+                }
+
+                val messages = querySnapshot?.documents?.mapNotNull { doc ->
+                    doc.toObject(Message::class.java)
+                } ?: emptyList()
+                
+                Log.d("Firestore", "Messages fetched for conversation $conversationId: ${messages.size}")
+                onSuccess(messages)
+            }
+    }
+
+    fun sendMessage(
+        conversationId: String,
+        message: Message,
+        onSuccess: () -> Unit,
+        onError: (Exception) -> Unit
+    ) {
+        val messagesRef = db.collection("messages")
+            .document(conversationId)
+            .collection("messages")
+        
+        messagesRef.add(message)
+            .addOnSuccessListener { documentRef ->
+                Log.d("Firestore", "Message sent: ${documentRef.id}")
+                
+                val conversationRef = db.collection("conversations").document(conversationId)
+                conversationRef.update(
+                    mapOf(
+                        "lastMessage" to message.text,
+                        "lastMessageSenderId" to message.senderId,
+                        "lastMessageTime" to com.google.firebase.firestore.FieldValue.serverTimestamp()
+                    )
+                )
+                    .addOnSuccessListener {
+                        Log.d("Firestore", "Conversation updated with last message")
+                        onSuccess()
+                    }
+                    .addOnFailureListener { e ->
+                        Log.w("Firestore", "Error updating conversation", e)
+                        onSuccess()
+                    }
+            }
+            .addOnFailureListener { e ->
+                Log.w("Firestore", "Error sending message", e)
                 onError(e)
             }
     }
