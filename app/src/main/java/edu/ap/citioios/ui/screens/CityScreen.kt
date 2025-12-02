@@ -79,6 +79,8 @@ fun CityScreen(
     val context = LocalContext.current
     val locationUiState by locationViewModel.uiState.collectAsState()
 
+    var distanceText = ""
+
     val fusedLocationClient = remember { LocationServices.getFusedLocationProviderClient(context) }
     var userLocation by remember { mutableStateOf<GeoPoint?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
@@ -123,14 +125,11 @@ fun CityScreen(
                     userLocation = GeoPoint(location.latitude, location.longitude)
                     val targetGeo = targetLocation.geoPoint.toOsmGeoPoint()
                     val distanceMeters = userLocation!!.distanceToAsDouble(targetGeo)
-                    val distanceText = if (distanceMeters > 1000) {
+                    distanceText = if (distanceMeters > 1000) {
                         String.format("%.2f km", distanceMeters / 1000)
                     } else {
                         String.format("%.0f meters", distanceMeters)
                     }
-                    Toast.makeText(context, "Distance to ${targetLocation.name}: $distanceText", Toast.LENGTH_LONG).show()
-                } else {
-                    Toast.makeText(context, "Searching for your location... please wait.", Toast.LENGTH_SHORT).show()
                 }
             }
             return
@@ -140,13 +139,11 @@ fun CityScreen(
             val targetGeo = targetLocation.geoPoint.toOsmGeoPoint()
             val distanceMeters = currentUser.distanceToAsDouble(targetGeo)
 
-            val distanceText = if (distanceMeters > 1000) {
+            distanceText = if (distanceMeters > 1000) {
                 String.format("%.2f km", distanceMeters / 1000)
             } else {
                 String.format("%.0f meters", distanceMeters)
             }
-
-            Toast.makeText(context, "Distance to ${targetLocation.name}: $distanceText", Toast.LENGTH_LONG).show()
         }
     }
 
@@ -266,7 +263,10 @@ fun CityScreen(
             }
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
-
+            if(distanceText != "") {
+                Text("Distance to current selected location: ${distanceText}")
+                HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
+            }
             // Loading indicator
             if (locationUiState.isLoading) {
                 Box(
