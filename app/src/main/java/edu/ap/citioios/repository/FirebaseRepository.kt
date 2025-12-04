@@ -230,7 +230,7 @@ object FirebaseRepository {
     }
 
     // Upload location image
-    suspend fun compressImageToBase64(context: Context, imageUri: Uri): String {
+    fun compressImageToBase64(context: Context, imageUri: Uri): String {
         try {
             // Read the image from URI
             val inputStream = context.contentResolver.openInputStream(imageUri)

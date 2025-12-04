@@ -1,13 +1,11 @@
 package edu.ap.citioios.ui.viewmodels
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import edu.ap.citioios.models.Conversation
 import edu.ap.citioios.repository.FirebaseRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 
 data class ConversationsUiState(
     val conversations: List<Conversation> = emptyList(),
