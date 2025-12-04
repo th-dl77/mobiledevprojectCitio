@@ -9,5 +9,7 @@ enum class AuthScreen {
     CITY,
     ADD_CITY,
     ADD_LOCATION,
-    LOCATION_DETAIL
+    LOCATION_DETAIL,
+    CONVERSATIONS,
+    CHAT
 }

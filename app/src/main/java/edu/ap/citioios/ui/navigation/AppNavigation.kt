@@ -17,7 +17,9 @@ import edu.ap.citioios.models.City
 import edu.ap.citioios.models.Location
 import edu.ap.citioios.ui.screens.AddCityScreen
 import edu.ap.citioios.ui.screens.AddLocationScreen
+import edu.ap.citioios.ui.screens.ChatScreen
 import edu.ap.citioios.ui.screens.CityScreen
+import edu.ap.citioios.ui.screens.ConversationsListScreen
 import edu.ap.citioios.ui.screens.HomeScreen
 import edu.ap.citioios.ui.screens.LocationDetailScreen
 import edu.ap.citioios.ui.screens.LoginScreen
@@ -36,6 +38,9 @@ fun AppNavigation(
     val context = LocalContext.current
     var selectedCity by remember { mutableStateOf<City?>(null) }
     var selectedLocation by remember { mutableStateOf<Location?>(null) }
+    var selectedConversationId by remember { mutableStateOf<String?>(null) }
+    var selectedOtherUserId by remember { mutableStateOf<String?>(null) }
+    var selectedOtherUserEmail by remember { mutableStateOf<String?>(null) }
 
     // Navigate to HOME when user successfully logs in
     LaunchedEffect(authUiState.isLoggedIn) {
@@ -144,6 +149,9 @@ fun AppNavigation(
                     navController.navigate(AuthScreen.START.name) {
                         popUpTo(AuthScreen.START.name) { inclusive = false }
                     }
+                },
+                onMessagesClick = {
+                    navController.navigate(AuthScreen.CONVERSATIONS.name)
                 }
             )
         }
@@ -206,9 +214,70 @@ fun AppNavigation(
                     location = location,
                     onBackClick = {
                         navController.popBackStack()
+                    },
+                    onMessageReviewer = { userId, userEmail ->
+                        val currentUser = edu.ap.citioios.repository.FirebaseRepository.getCurrentUser()
+                        if (currentUser != null && userId != currentUser.uid) {
+                            edu.ap.citioios.repository.FirebaseRepository.getOrCreateConversation(
+                                currentUserId = currentUser.uid,
+                                currentUserEmail = currentUser.email,
+                                otherUserId = userId,
+                                otherUserEmail = userEmail,
+                                onSuccess = { conversationId ->
+                                    selectedConversationId = conversationId
+                                    selectedOtherUserId = userId
+                                    selectedOtherUserEmail = userEmail
+                                    navController.navigate(AuthScreen.CHAT.name)
+                                },
+                                onError = { exception ->
+                                    Toast.makeText(
+                                        context,
+                                        "Fout bij maken gesprek: ${exception.message}",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            )
+                        } else if (userId == currentUser?.uid) {
+                            Toast.makeText(
+                                context,
+                                "Je kunt geen bericht naar jezelf sturen",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
                     }
                 )
             } ?: run {
+                LaunchedEffect(Unit) {
+                    navController.popBackStack()
+                }
+            }
+        }
+
+        composable(route = AuthScreen.CONVERSATIONS.name) {
+            ConversationsListScreen(
+                onBackClick = {
+                    navController.popBackStack()
+                },
+                onConversationClick = { conversationId, otherUserId, otherUserEmail ->
+                    selectedConversationId = conversationId
+                    selectedOtherUserId = otherUserId
+                    selectedOtherUserEmail = otherUserEmail
+                    navController.navigate(AuthScreen.CHAT.name)
+                }
+            )
+        }
+
+        composable(route = AuthScreen.CHAT.name) {
+            if (selectedConversationId != null && selectedOtherUserId != null && selectedOtherUserEmail != null) {
+                ChatScreen(
+                    conversationId = selectedConversationId!!,
+                    otherUserId = selectedOtherUserId!!,
+                    otherUserEmail = selectedOtherUserEmail!!,
+                    onBackClick = {
+                        navController.popBackStack()
+                    }
+                )
+            } else {
                 LaunchedEffect(Unit) {
                     navController.popBackStack()
                 }

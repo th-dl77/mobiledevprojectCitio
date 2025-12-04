@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Message
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -38,6 +39,7 @@ import java.util.Locale
 fun LocationDetailScreen(
     location: Location,
     onBackClick: () -> Unit,
+    onMessageReviewer: (userId: String, userEmail: String) -> Unit,
     viewModel: LocationDetailViewModel = viewModel()
 ) {
     val osmGeoPoint = location.geoPoint.toOsmGeoPoint()
@@ -250,6 +252,9 @@ fun LocationDetailScreen(
                 items(reviews) { review ->
                     ReviewCard(
                         review = review,
+                        onMessageClick = {
+                            onMessageReviewer(review.userId, review.userDisplayName)
+                        },
                         modifier = Modifier
                             .padding(horizontal = 16.dp)
                             .padding(bottom = 8.dp)
@@ -342,7 +347,11 @@ fun DetailItem(label: String, value: String) {
 }
 
 @Composable
-fun ReviewCard(review: Review, modifier: Modifier = Modifier) {
+fun ReviewCard(
+    review: Review,
+    onMessageClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     val formatter = remember { SimpleDateFormat("dd MMMM yyyy", Locale.getDefault()) }
     val formattedDate = remember(review.createdAt) {
         formatter.format(review.createdAt)
@@ -354,21 +363,37 @@ fun ReviewCard(review: Review, modifier: Modifier = Modifier) {
         Column(
             modifier = Modifier.padding(12.dp)
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                (1..5).forEach { starIndex ->
-                    Icon(
-                        Icons.Filled.Star,
-                        contentDescription = null,
-                        tint = if (starIndex <= review.rating) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
-                        modifier = Modifier.size(18.dp)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    (1..5).forEach { starIndex ->
+                        Icon(
+                            Icons.Filled.Star,
+                            contentDescription = null,
+                            tint = if (starIndex <= review.rating) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = "${review.rating}/5",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.secondary
                     )
                 }
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    text = "${review.rating}/5",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.secondary
-                )
+                
+                IconButton(onClick = onMessageClick) {
+                    Icon(
+                        imageVector = Icons.Default.Message,
+                        contentDescription = "Bericht reviewer",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
             }
 
             if (review.comment.isNotBlank()) {
@@ -404,7 +429,8 @@ fun LocationDetailScreenPreview() {
                 reviewCount = 128,
                 addedByUserId = "user123"
             ),
-            onBackClick = {}
+            onBackClick = {},
+            onMessageReviewer = { _, _ -> }
         )
     }
 }
